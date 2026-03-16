@@ -307,12 +307,14 @@ function VideoPreviewItem({ item }) {
     }
   };
 
-  if (item.videoObjectUrl) {
+  const videoSrc = item.videoObjectUrl || item.url;
+
+  if (videoSrc) {
     return (
       <div className="relative rounded-xl overflow-hidden">
         <video
           ref={videoRef}
-          src={item.videoObjectUrl}
+          src={videoSrc}
           autoPlay
           muted={muted}
           loop
@@ -326,14 +328,6 @@ function VideoPreviewItem({ item }) {
         >
           {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
         </button>
-      </div>
-    );
-  }
-
-  if (item.url) {
-    return (
-      <div className="aspect-video bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 border border-neutral-200">
-        <span className="text-sm">외부 영상: {item.url}</span>
       </div>
     );
   }

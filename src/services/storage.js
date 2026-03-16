@@ -61,6 +61,17 @@ export async function uploadCompressed(file, category) {
   return compressAndUpload(file, generatePath(category));
 }
 
+/**
+ * 영상 파일을 Firebase Storage에 업로드
+ * @param {Blob|File} file - 영상 파일 (압축 후 Blob)
+ * @param {string} category - 탭 ID (예: 'family')
+ * @returns {Promise<string>} 다운로드 URL
+ */
+export async function uploadVideo(file, category) {
+  const path = `videos/${category}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.mp4`;
+  return uploadImage(path, file); // uploadImage는 범용 업로드 함수
+}
+
 export async function compressAndUpload(file, storagePath, maxSize = 1200, quality = 0.8) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

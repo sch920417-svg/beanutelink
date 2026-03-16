@@ -41,6 +41,7 @@ const SECTION_COMPONENT_MAP = {
 const SECTION_EXTRA_PROPS = {
   guide: true,
   blog: true,
+  video: true,
 };
 
 // ─── Sortable Item (공통) ─────────────────────────────────
