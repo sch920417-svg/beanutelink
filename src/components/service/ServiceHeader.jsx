@@ -21,8 +21,8 @@ export default function ServiceHeader({ tabs = [], activeTab, onTabChange }) {
   }, [activeTab]);
 
   return (
-    <div className="sticky top-0 z-50 bg-white pt-12">
-      {/* 로고 — Safe Area 아래에서 시작 */}
+    <div className="sticky top-0 z-50 bg-white">
+      {/* 로고 */}
       <div className="px-5 pt-4 pb-4">
         <h1 className="text-[22px] font-black tracking-tight text-black select-none">
           BEANUTE
