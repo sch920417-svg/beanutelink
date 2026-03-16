@@ -272,8 +272,8 @@ export default function App() {
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isLoginRoute = location.pathname === '/login';
 
-  // ─── 인증 로딩 중 ───
-  if (user === undefined) {
+  // ─── 인증 로딩 중 (관리자/로그인 페이지만 대기) ───
+  if (user === undefined && (isAdminRoute || isLoginRoute)) {
     return <FullScreenLoading />;
   }
 

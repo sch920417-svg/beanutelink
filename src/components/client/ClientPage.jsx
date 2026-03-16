@@ -5,6 +5,8 @@ import VisitPurposeModal from '../service/VisitPurposeModal';
 import { BuilderPreview } from '../builder/BuilderPreview';
 import { trackEvent, EVENT_TYPES, initLocationDetection, getVisitPurpose } from '../../utils/analytics';
 import { subscribeSettings, subscribePageConfigs, subscribeBlogs } from '../../services/firestore';
+import { initialPageConfigs } from '../../data/pageConfigData';
+import { initialBlogs } from '../../data/data';
 
 /**
  * 고객용 페이지 — BuilderPreview(mode="client")를 직접 사용
@@ -26,19 +28,23 @@ export default function ClientPage() {
     try { return JSON.parse(localStorage.getItem('sl_blogs') || '{}'); } catch { return {}; }
   });
 
-  // Firestore 실시간 리스너
+  // Firestore 실시간 리스너 + 폴백 타이머
+  const [dataReady, setDataReady] = useState(false);
   useEffect(() => {
+    let gotData = false;
     const unsubs = [
+      subscribePageConfigs((data) => {
+        if (data && Object.keys(data).length > 0) {
+          gotData = true;
+          setPageConfigs(data);
+          setDataReady(true);
+          try { localStorage.setItem('sl_page_configs', JSON.stringify(data)); } catch {}
+        }
+      }),
       subscribeSettings((data) => {
         if (data) {
           setSettings(data);
           try { localStorage.setItem('sl_settings', JSON.stringify(data)); } catch {}
-        }
-      }),
-      subscribePageConfigs((data) => {
-        if (data && Object.keys(data).length > 0) {
-          setPageConfigs(data);
-          try { localStorage.setItem('sl_page_configs', JSON.stringify(data)); } catch {}
         }
       }),
       subscribeBlogs((data) => {
@@ -48,7 +54,21 @@ export default function ClientPage() {
         }
       }),
     ];
-    return () => unsubs.forEach(u => u());
+
+    // 3초 후에도 Firestore 데이터가 없으면 초기 데이터로 폴백
+    const fallbackTimer = setTimeout(() => {
+      if (!gotData) {
+        console.log('Firestore 데이터 없음 — 초기 데이터로 폴백');
+        setPageConfigs(initialPageConfigs);
+        setBlogs(initialBlogs);
+        setDataReady(true);
+      }
+    }, 3000);
+
+    return () => {
+      clearTimeout(fallbackTimer);
+      unsubs.forEach(u => u());
+    };
   }, []);
 
   // pageConfigs에서 탭 정보 파생
