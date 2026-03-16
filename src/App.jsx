@@ -216,34 +216,20 @@ export default function App() {
     seedIfEmpty();
   }, [user, dataLoaded]);
 
-  // ─── settings 변경 시 Firestore + localStorage 동기화 ───
+  // ─── localStorage 동기화 (Firestore 저장은 "변경사항 배포" 버튼으로만) ───
   useEffect(() => {
     if (!dataLoaded || skipFirestoreSync.current) return;
     try { localStorage.setItem('sl_settings', JSON.stringify(settings)); } catch {}
-    saveSettings(settings).catch(err => {
-      console.error('settings 저장 실패:', err);
-      showToast('설정 자동 저장 실패: 변경사항 배포 버튼을 눌러주세요.');
-    });
   }, [settings, dataLoaded]);
 
-  // ─── pageConfigs 변경 시 Firestore + localStorage 동기화 ───
   useEffect(() => {
     if (!dataLoaded || skipFirestoreSync.current) return;
     try { localStorage.setItem('sl_page_configs', JSON.stringify(pageConfigs)); } catch {}
-    saveAllPageConfigs(pageConfigs).catch(err => {
-      console.error('pageConfigs 저장 실패:', err);
-      showToast('자동 저장 실패: 변경사항 배포 버튼을 눌러주세요.');
-    });
   }, [pageConfigs, dataLoaded]);
 
-  // ─── blogs 변경 시 Firestore + localStorage 동기화 ───
   useEffect(() => {
     if (!dataLoaded || skipFirestoreSync.current) return;
     try { localStorage.setItem('sl_blogs', JSON.stringify(blogs)); } catch {}
-    saveAllBlogs(blogs).catch(err => {
-      console.error('blogs 저장 실패:', err);
-      showToast('블로그 자동 저장 실패: 변경사항 배포 버튼을 눌러주세요.');
-    });
   }, [blogs, dataLoaded]);
 
   const [toastMsg, setToastMsg] = useState('');
@@ -262,18 +248,52 @@ export default function App() {
     }
   }, []);
 
+  // base64 데이터(data:image/...)를 제거하여 Firestore 1MB 한도 방지
+  const cleanBase64FromConfigs = (configs) => {
+    const cleaned = JSON.parse(JSON.stringify(configs));
+    const clean = (obj) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      if (Array.isArray(obj)) return obj.map(clean);
+      for (const key of Object.keys(obj)) {
+        if (typeof obj[key] === 'string' && obj[key].startsWith('data:image/')) {
+          obj[key] = ''; // base64 → 빈 문자열로 교체
+        } else if (typeof obj[key] === 'object') {
+          obj[key] = clean(obj[key]);
+        }
+      }
+      return obj;
+    };
+    return clean(cleaned);
+  };
+
+  const withTimeout = (promise, ms) => {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`${ms / 1000}초 타임아웃 — 네트워크를 확인해주세요.`)), ms)),
+    ]);
+  };
+
   const handleDeploy = async () => {
     if (isDeploying) return;
     setIsDeploying(true);
     showToast('변경사항 배포 중... 잠시만 기다려주세요.', 'loading', 0);
     try {
-      await saveAllPageConfigs(pageConfigs);
-      await saveSettings(settings);
-      await saveAllBlogs(blogs);
+      // base64 이미지가 남아있으면 제거 (Firestore 1MB 초과 방지)
+      const cleanedConfigs = cleanBase64FromConfigs(pageConfigs);
+
+      showToast('페이지 설정 저장 중... (1/3)', 'loading', 0);
+      await withTimeout(saveAllPageConfigs(cleanedConfigs), 15000);
+
+      showToast('환경 설정 저장 중... (2/3)', 'loading', 0);
+      await withTimeout(saveSettings(settings), 15000);
+
+      showToast('블로그 저장 중... (3/3)', 'loading', 0);
+      await withTimeout(saveAllBlogs(blogs), 15000);
+
       showToast('변경사항이 성공적으로 배포되었습니다!', 'success', 4000);
     } catch (err) {
       console.error('배포 실패:', err);
-      showToast('배포 실패: ' + err.message, 'error', 6000);
+      showToast('배포 실패: ' + err.message, 'error', 8000);
     } finally {
       setIsDeploying(false);
     }
