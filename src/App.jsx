@@ -89,12 +89,16 @@ export default function App() {
   // Firestore 저장 중복 방지 플래그
   const skipFirestoreSync = useRef(false);
 
-  // ─── Firebase Auth 리스너 ───
+  // ─── Firebase Auth 리스너 + 타임아웃 ───
   useEffect(() => {
     const unsub = onAuthChange((firebaseUser) => {
       setUser(firebaseUser);
     });
-    return unsub;
+    // 3초 내 Auth 미응답 시 비로그인 처리 → /login 리다이렉트
+    const timeout = setTimeout(() => {
+      setUser((prev) => (prev === undefined ? null : prev));
+    }, 3000);
+    return () => { unsub(); clearTimeout(timeout); };
   }, []);
 
   // ─── Firestore 읽기 + 실시간 리스너 (인증 불필요) ───
