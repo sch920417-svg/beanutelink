@@ -719,18 +719,20 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
             <>
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1, transition: { duration: 0.2, ease: [0.2, 0, 0, 1] } }}
-                exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                 className="fixed inset-0 bg-black/40 z-[55]"
                 onClick={() => setBottomSheet(null)}
               />
               <motion.div
                 initial={{ y: '100%' }}
-                animate={{ y: 0, transition: { duration: 0.28, ease: [0.2, 0, 0, 1] } }}
-                exit={{ y: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                 drag="y"
                 dragConstraints={{ top: 0 }}
-                dragElastic={0.12}
+                dragElastic={0.15}
                 onDragEnd={(_, info) => { if (info.offset.y > 80 || info.velocity.y > 300) setBottomSheet(null); }}
                 className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[1.5rem] z-[56] shadow-2xl"
                 style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
@@ -782,18 +784,20 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
             <>
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1, transition: { duration: 0.2, ease: [0.2, 0, 0, 1] } }}
-                exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                 className="fixed inset-0 bg-black/40 z-[55]"
                 onClick={() => setBottomSheet(null)}
               />
               <motion.div
                 initial={{ y: '100%' }}
-                animate={{ y: 0, transition: { duration: 0.28, ease: [0.2, 0, 0, 1] } }}
-                exit={{ y: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                 drag="y"
                 dragConstraints={{ top: 0 }}
-                dragElastic={0.12}
+                dragElastic={0.15}
                 onDragEnd={(_, info) => { if (info.offset.y > 80 || info.velocity.y > 300) setBottomSheet(null); }}
                 className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[1.5rem] z-[56] shadow-2xl"
                 style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
@@ -936,15 +940,17 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
             <>
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1, transition: { duration: 0.2, ease: [0.2, 0, 0, 1] } }}
-                exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                 className="absolute inset-0 bg-black/40 z-[55]"
                 onClick={() => setBottomSheet(null)}
               />
               <motion.div
                 initial={{ y: '100%' }}
-                animate={{ y: 0, transition: { duration: 0.28, ease: [0.2, 0, 0, 1] } }}
-                exit={{ y: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                 className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[1.5rem] z-[56] shadow-2xl"
                 style={{ backfaceVisibility: 'hidden' }}
               >
@@ -1000,15 +1006,17 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
             <>
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1, transition: { duration: 0.2, ease: [0.2, 0, 0, 1] } }}
-                exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                 className="absolute inset-0 bg-black/40 z-[55]"
                 onClick={() => setBottomSheet(null)}
               />
               <motion.div
                 initial={{ y: '100%' }}
-                animate={{ y: 0, transition: { duration: 0.28, ease: [0.2, 0, 0, 1] } }}
-                exit={{ y: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+                animate={{ y: 0 }}
+                exit={{ y: '100%' }}
+                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                 className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[1.5rem] z-[56] shadow-2xl"
                 style={{ backfaceVisibility: 'hidden' }}
               >
