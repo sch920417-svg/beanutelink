@@ -220,21 +220,30 @@ export default function App() {
   useEffect(() => {
     if (!dataLoaded || skipFirestoreSync.current) return;
     try { localStorage.setItem('sl_settings', JSON.stringify(settings)); } catch {}
-    saveSettings(settings).catch(err => console.error('settings 저장 실패:', err));
+    saveSettings(settings).catch(err => {
+      console.error('settings 저장 실패:', err);
+      showToast('설정 자동 저장 실패: 변경사항 배포 버튼을 눌러주세요.');
+    });
   }, [settings, dataLoaded]);
 
   // ─── pageConfigs 변경 시 Firestore + localStorage 동기화 ───
   useEffect(() => {
     if (!dataLoaded || skipFirestoreSync.current) return;
     try { localStorage.setItem('sl_page_configs', JSON.stringify(pageConfigs)); } catch {}
-    saveAllPageConfigs(pageConfigs).catch(err => console.error('pageConfigs 저장 실패:', err));
+    saveAllPageConfigs(pageConfigs).catch(err => {
+      console.error('pageConfigs 저장 실패:', err);
+      showToast('자동 저장 실패: 변경사항 배포 버튼을 눌러주세요.');
+    });
   }, [pageConfigs, dataLoaded]);
 
   // ─── blogs 변경 시 Firestore + localStorage 동기화 ───
   useEffect(() => {
     if (!dataLoaded || skipFirestoreSync.current) return;
     try { localStorage.setItem('sl_blogs', JSON.stringify(blogs)); } catch {}
-    saveAllBlogs(blogs).catch(err => console.error('blogs 저장 실패:', err));
+    saveAllBlogs(blogs).catch(err => {
+      console.error('blogs 저장 실패:', err);
+      showToast('블로그 자동 저장 실패: 변경사항 배포 버튼을 눌러주세요.');
+    });
   }, [blogs, dataLoaded]);
 
   const [toastMsg, setToastMsg] = useState('');
@@ -245,6 +254,21 @@ export default function App() {
     setIsToastVisible(true);
     setTimeout(() => setIsToastVisible(false), 3000);
   }, []);
+
+  const handleDeploy = async () => {
+    showToast('변경사항 배포 중...');
+    try {
+      await Promise.all([
+        saveAllPageConfigs(pageConfigs),
+        saveSettings(settings),
+        saveAllBlogs(blogs),
+      ]);
+      showToast('변경사항이 성공적으로 배포되었습니다!');
+    } catch (err) {
+      console.error('배포 실패:', err);
+      showToast('배포 실패: ' + err.message);
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => setIsSidebarOpen(window.innerWidth >= 768);
@@ -369,7 +393,7 @@ export default function App() {
         </nav>
 
         <div className={`p-4 border-t border-neutral-800 bg-neutral-900 shrink-0 space-y-2 ${!isSidebarOpen && 'flex flex-col items-center'}`}>
-          <button onClick={() => showToast('서버에 변경사항을 안전하게 배포 중입니다...')} className={`w-full flex items-center justify-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-white py-3 rounded-xl transition-colors ${!isSidebarOpen && 'px-0'}`} title={!isSidebarOpen ? '변경사항 배포' : ''}>
+          <button onClick={handleDeploy} className={`w-full flex items-center justify-center gap-2 bg-neutral-800 hover:bg-neutral-700 text-white py-3 rounded-xl transition-colors ${!isSidebarOpen && 'px-0'}`} title={!isSidebarOpen ? '변경사항 배포' : ''}>
             <Icon name="Rocket" size={18} className="text-lime-400" />
             {isSidebarOpen && <span className="font-bold text-sm whitespace-nowrap">변경사항 배포</span>}
           </button>
