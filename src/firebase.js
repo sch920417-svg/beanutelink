@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { initializeFirestore } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
@@ -14,11 +14,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Firestore: WebSocket 대신 HTTP long polling 사용
-// setDoc이 hang되는 문제 방지 (WebSocket 연결 불안정 환경 대응)
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
+export const db = getFirestore(app);
 
 export const storage = getStorage(app);
 export const auth = getAuth(app);

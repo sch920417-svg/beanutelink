@@ -286,54 +286,43 @@ export default function App() {
     setIsDeploying(true);
     showToast('서버 연결 확인 중...', 'loading', 0);
     try {
-      // 0. Firestore 연결 테스트
-      await withTimeout(testFirestoreWrite(), 5000);
-      console.log('[배포] Firestore 연결 OK');
+      // 0. REST API로 Firestore 연결 테스트
+      await withTimeout(testFirestoreWrite(), 10000);
+      console.log('[배포] Firestore REST API 연결 OK');
 
       // 1. 데이터 정리
       const cleanedConfigs = cleanForFirestore(pageConfigs);
       const cleanedSettings = cleanForFirestore(settings);
       const cleanedBlogs = cleanForFirestore(blogs);
 
-      // 2. 개별 탭 문서를 순차적으로 저장 (어느 탭이 실패하는지 파악)
+      // 2. 개별 탭 문서 저장
       const tabEntries = Object.entries(cleanedConfigs);
       for (let i = 0; i < tabEntries.length; i++) {
         const [tabId, config] = tabEntries[i];
-        const size = JSON.stringify(config).length;
-        showToast(`페이지 저장 중... (${i + 1}/${tabEntries.length}) [${tabId}: ${Math.round(size / 1024)}KB]`, 'loading', 0);
-        console.log(`[배포] 탭 "${tabId}" 저장 시작 (${size} bytes)`);
-
-        if (size > 900000) {
-          console.error(`[배포] 탭 "${tabId}" 크기 초과 (${size} bytes) — 건너뜀`);
-          continue;
-        }
-
-        await withTimeout(savePageConfig(tabId, config), 10000);
+        showToast(`페이지 저장 중... (${i + 1}/${tabEntries.length})`, 'loading', 0);
+        console.log(`[배포] 탭 "${tabId}" 저장 시작`);
+        await withTimeout(savePageConfig(tabId, config), 30000);
         console.log(`[배포] 탭 "${tabId}" 저장 완료`);
       }
 
       // 3. 설정 저장
-      const settingsSize = JSON.stringify(cleanedSettings).length;
-      showToast(`환경 설정 저장 중... [${Math.round(settingsSize / 1024)}KB]`, 'loading', 0);
-      console.log(`[배포] settings 저장 시작 (${settingsSize} bytes)`);
-      await withTimeout(saveSettings(cleanedSettings), 10000);
+      showToast('환경 설정 저장 중...', 'loading', 0);
+      await withTimeout(saveSettings(cleanedSettings), 30000);
       console.log('[배포] settings 저장 완료');
 
       // 4. 블로그 저장
       const blogEntries = Object.entries(cleanedBlogs);
       for (let i = 0; i < blogEntries.length; i++) {
         const [productId, posts] = blogEntries[i];
-        const size = JSON.stringify(posts).length;
         showToast(`블로그 저장 중... (${i + 1}/${blogEntries.length})`, 'loading', 0);
-        console.log(`[배포] 블로그 "${productId}" 저장 시작 (${size} bytes)`);
-        await withTimeout(saveBlogs(productId, posts), 10000);
+        await withTimeout(saveBlogs(productId, posts), 30000);
         console.log(`[배포] 블로그 "${productId}" 저장 완료`);
       }
 
       showToast('변경사항이 성공적으로 배포되었습니다!', 'success', 4000);
     } catch (err) {
       console.error('[배포] 실패:', err);
-      showToast('배포 실패: ' + err.message, 'error', 8000);
+      showToast('배포 실패: ' + err.message, 'error', 10000);
     } finally {
       setIsDeploying(false);
     }

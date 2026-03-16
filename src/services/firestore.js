@@ -1,17 +1,16 @@
 import { db } from '../firebase';
 import {
-  doc, setDoc, getDoc, getDocs,
-  collection, onSnapshot, deleteDoc, writeBatch,
+  doc, getDoc, getDocs,
+  collection, onSnapshot, deleteDoc,
 } from 'firebase/firestore';
+import { restSetDoc, testConnection } from './firestoreRest';
 
 // ─── 연결 테스트 ─────────────────────────────────────────────
-export async function testFirestoreWrite() {
-  await setDoc(doc(db, '_ping', 'test'), { t: Date.now() });
-}
+export { testConnection as testFirestoreWrite };
 
 // ─── Settings ────────────────────────────────────────────────
 export async function saveSettings(settings) {
-  await setDoc(doc(db, 'settings', 'main'), settings, { merge: true });
+  await restSetDoc('settings', 'main', settings);
 }
 
 export async function loadSettings() {
@@ -27,15 +26,13 @@ export function subscribeSettings(callback) {
 
 // ─── Page Configs ────────────────────────────────────────────
 export async function savePageConfig(tabId, config) {
-  await setDoc(doc(db, 'pageConfigs', tabId), config);
+  await restSetDoc('pageConfigs', tabId, config);
 }
 
 export async function saveAllPageConfigs(pageConfigs) {
-  const batch = writeBatch(db);
-  Object.entries(pageConfigs).forEach(([tabId, config]) => {
-    batch.set(doc(db, 'pageConfigs', tabId), config);
-  });
-  await batch.commit();
+  for (const [tabId, config] of Object.entries(pageConfigs)) {
+    await restSetDoc('pageConfigs', tabId, config);
+  }
 }
 
 export async function deletePageConfig(tabId) {
@@ -59,15 +56,13 @@ export function subscribePageConfigs(callback) {
 
 // ─── Blogs ───────────────────────────────────────────────────
 export async function saveBlogs(productId, blogs) {
-  await setDoc(doc(db, 'blogs', productId), { posts: blogs });
+  await restSetDoc('blogs', productId, { posts: blogs });
 }
 
 export async function saveAllBlogs(allBlogs) {
-  const batch = writeBatch(db);
-  Object.entries(allBlogs).forEach(([productId, posts]) => {
-    batch.set(doc(db, 'blogs', productId), { posts });
-  });
-  await batch.commit();
+  for (const [productId, posts] of Object.entries(allBlogs)) {
+    await restSetDoc('blogs', productId, { posts });
+  }
 }
 
 export async function loadAllBlogs() {
