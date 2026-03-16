@@ -74,6 +74,7 @@ export default function ClientPage() {
   // pageConfigs에서 탭 정보 파생
   const productTabs = useMemo(() =>
     Object.entries(pageConfigs)
+      .filter(([id]) => id !== 'home')
       .map(([id, cfg]) => ({
         id,
         label: cfg?.header?.tabLabel || cfg?.meta?.label || id,
@@ -83,17 +84,16 @@ export default function ClientPage() {
     [pageConfigs]
   );
 
-  const firstTabId = productTabs[0]?.id || '';
-  const effectiveTab = activeTab === 'home' ? firstTabId : activeTab;
+  const effectiveTab = activeTab;
   const config = pageConfigs[effectiveTab];
 
   // 스플래시 타이머
   useEffect(() => {
-    const splashConfig = pageConfigs[firstTabId]?.splash;
+    const splashConfig = pageConfigs['home']?.splash || pageConfigs[productTabs[0]?.id]?.splash;
     const duration = (splashConfig?.duration || 1.8) * 1000;
     const timer = setTimeout(() => setShowSplash(false), duration);
     return () => clearTimeout(timer);
-  }, [pageConfigs, firstTabId]);
+  }, [pageConfigs, productTabs]);
 
   // 서비스 페이지 방문 추적 (스플래시 종료 후)
   useEffect(() => {
@@ -115,7 +115,7 @@ export default function ClientPage() {
     );
   }
 
-  const splashLogoText = pageConfigs[firstTabId]?.splash?.logoText || settings?.brandName || 'BEANUTE';
+  const splashLogoText = pageConfigs['home']?.splash?.logoText || config?.splash?.logoText || settings?.brandName || 'BEANUTE';
 
   return (
     <div className="min-h-screen bg-neutral-100 flex justify-center">

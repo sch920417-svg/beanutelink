@@ -533,8 +533,9 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
   const [bottomSheet, setBottomSheet] = useState(null); // 'product' | 'blog' | 'chat' | 'phone' | null
   const scrollRef = useRef(null);
 
-  // pageConfigs에서 탭 정보 동적 파생 (홈 탭을 맨 앞에 추가)
+  // pageConfigs에서 탭 정보 동적 파생
   const productTabs = Object.entries(pageConfigs || {})
+    .filter(([id]) => id !== 'home')
     .map(([id, cfg]) => ({
       id,
       label: cfg?.header?.tabLabel || cfg?.meta?.label || id,
@@ -544,8 +545,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
     .sort((a, b) => a.order - b.order);
   const tabs = [{ id: 'home', label: '홈', order: -1 }, ...productTabs];
 
-  // 홈 탭일 때는 첫 번째 실제 상품 탭의 데이터를 보여줌
-  const effectiveTab = activeTab === 'home' ? (productTabs[0]?.id || '') : activeTab;
+  const effectiveTab = activeTab;
 
   // 탭 변경 시 네비 상태 동기화
   const handleTabChange = (tabId) => {

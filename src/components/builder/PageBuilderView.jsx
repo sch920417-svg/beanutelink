@@ -309,13 +309,13 @@ export function PageBuilderView({ pageConfigs, setPageConfigs, blogs, setBlogs, 
   // 탭 목록 (pageConfigs에서 파생)
   const tabs = useMemo(() =>
     Object.entries(pageConfigs)
+      .filter(([id]) => id !== 'home')
       .map(([id, cfg]) => ({ id, label: cfg.meta?.label || id, icon: cfg.meta?.icon || '📦', order: cfg.meta?.order ?? 0 }))
       .sort((a, b) => a.order - b.order),
     [pageConfigs]
   );
 
-  // 홈 탭일 때는 첫 번째 실제 상품 탭의 데이터를 보여줌
-  const effectiveTab = activeTab === 'home' ? (tabs[0]?.id || '') : activeTab;
+  const effectiveTab = activeTab;
   const config = pageConfigs[effectiveTab];
   const sections = config?.sections || [];
 

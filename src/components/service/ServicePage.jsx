@@ -83,8 +83,7 @@ export default function ServicePage() {
     }
   }, [showSplash]);
 
-  // 홈 탭일 때는 첫 번째 실제 상품 탭의 데이터를 보여줌
-  const effectiveTab = activeTab === 'home' ? (config?.tabs?.[0]?.id || '') : activeTab;
+  const effectiveTab = activeTab;
 
   // 현재 탭에 맞는 데이터 필터링
   const currentHeroImages = useMemo(

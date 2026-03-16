@@ -110,6 +110,8 @@ export const createDefaultConfig = (tabLabel, tabId, order = 0, icon = '📦') =
 });
 
 export const initialPageConfigs = {
+  home: createDefaultConfig('홈', 'home', -1, '🏠'),
+
   family: {
     ...createDefaultConfig('가족사진', 'family', 0, '👨‍👩‍👧‍👦'),
     guide: {
