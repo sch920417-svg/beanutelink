@@ -4,7 +4,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icons, BLOCK_TYPES } from '../../data/links';
-import { compressImage } from '../../utils';
+import { uploadCompressed } from '../../services/storage';
 
 // Common Icon Renderer
 const Icon = ({ name, size = 24, className = "" }) => {
@@ -115,7 +115,7 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
         const file = e.target.files[0];
         if (!file) return;
         showToast('이미지 업로드 중...');
-        const compressed = await compressImage(file);
+        const compressed = await uploadCompressed(file, 'blog');
         updatePost({ [fieldName]: compressed });
     };
 
@@ -178,7 +178,7 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
         const file = e.target.files[0];
         if (!file) return;
         showToast('블록 이미지 업로드 중...');
-        const compressed = await compressImage(file);
+        const compressed = await uploadCompressed(file, 'blog');
         updateBlock(blockId, { [fieldName]: compressed });
     };
 
@@ -480,7 +480,7 @@ const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, u
                                     const files = Array.from(e.target.files);
                                     if(files.length === 0) return;
                                     showToast ? showToast('이미지 업로드 중...') : console.log('이미지 업로드 중...');
-                                    const compressedPromises = files.map(compressImage);
+                                    const compressedPromises = files.map(f => uploadCompressed(f, 'blog'));
                                     const compressedUrls = await Promise.all(compressedPromises);
                                     updateBlock(block.id, { images: [...(block.images || []), ...compressedUrls] });
                                 }} />

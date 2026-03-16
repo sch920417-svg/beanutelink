@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Icons } from '../../data/links';
-import { compressImage } from '../../utils';
+import { uploadCompressed } from '../../services/storage';
 
 const Icon = ({ name, size = 24, className = "" }) => {
     const Comp = Icons[name] || Icons.HelpCircle;
@@ -33,8 +33,8 @@ export function SettingsView({ settings, setSettings, showToast, pageConfigs = {
     const handleProfileUpload = async (e) => {
         if (e.target.files && e.target.files[0]) {
             showToast('프로필 사진 최적화 중...');
-            const compressedBase64 = await compressImage(e.target.files[0]);
-            setSettings({ ...settings, profileImage: compressedBase64 });
+            const url = await uploadCompressed(e.target.files[0], 'settings');
+            setSettings({ ...settings, profileImage: url });
             showToast('새로운 프로필이 고화질로 적용되었습니다.');
         }
     };

@@ -47,6 +47,20 @@ export async function deleteImage(storagePath) {
  * @param {number} quality - JPEG 품질 (기본 0.8)
  * @returns {Promise<string>} 다운로드 URL
  */
+/**
+ * 카테고리별 고유 Storage 경로 생성
+ */
+function generatePath(category) {
+  return `images/${category}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+}
+
+/**
+ * File 객체를 압축 후 Storage에 업로드 (카테고리만 넘기면 경로 자동 생성)
+ */
+export async function uploadCompressed(file, category) {
+  return compressAndUpload(file, generatePath(category));
+}
+
 export async function compressAndUpload(file, storagePath, maxSize = 1200, quality = 0.8) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

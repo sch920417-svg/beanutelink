@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Icons } from '../../data/links';
-import { compressImage } from '../../utils';
+import { uploadCompressed } from '../../services/storage';
 
 const Icon = ({ name, size = 24, className = "" }) => {
     const Comp = Icons[name] || Icons.HelpCircle;
@@ -102,8 +102,8 @@ export function ProductsView({ products, setProducts, showToast }) {
                                 <input type="file" id="product-img-upload" accept="image/*" className="hidden" onChange={async (e) => {
                                     if (e.target.files && e.target.files[0]) {
                                         showToast('이미지 압축 및 최적화 중...');
-                                        const compressedBase64 = await compressImage(e.target.files[0]);
-                                        setEditingProduct({ ...editingProduct, image: compressedBase64 });
+                                        const url = await uploadCompressed(e.target.files[0], 'products');
+                                        setEditingProduct({ ...editingProduct, image: url });
                                         showToast('고화질 썸네일이 적용되었습니다.');
                                     }
                                 }} />

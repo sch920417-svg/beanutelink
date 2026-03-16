@@ -1,6 +1,6 @@
 import React from 'react';
 import { Icons } from '../../data/links';
-import { compressImage } from '../../utils';
+import { uploadCompressed } from '../../services/storage';
 
 const Icon = ({ name, size = 24, className = "" }) => {
   const Comp = Icons[name] || Icons.HelpCircle;
@@ -16,7 +16,7 @@ export function HeroSliderSection({ config, updateConfig, showToast }) {
     showToast('이미지 업로드 중...');
     const newImages = [];
     for (const file of files) {
-      const compressed = await compressImage(file);
+      const compressed = await uploadCompressed(file, 'hero');
       newImages.push({
         id: `hero-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         url: compressed,

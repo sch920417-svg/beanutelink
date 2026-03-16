@@ -4,7 +4,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icons, BLOCK_TYPES } from '../../data/links';
-import { compressImage } from '../../utils';
+import { uploadCompressed } from '../../services/storage';
 
 const SortableBlockItem = ({ id, b, bType, setEditingBlock, handleDeleteBlock }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -123,8 +123,8 @@ export function EditorView({ blocks, setBlocks, showToast }) {
                         <input type="file" id="block-img-upload" accept="image/*" className="hidden" onChange={async (e) => {
                             if (e.target.files && e.target.files[0]) {
                                 showToast('이미지 처리중...');
-                                const compressed = await compressImage(e.target.files[0]);
-                                handleChange('image', compressed);
+                                const url = await uploadCompressed(e.target.files[0], 'editor');
+                                handleChange('image', url);
                             }
                         }} />
                         <label htmlFor="block-img-upload" className="bg-neutral-950 border border-neutral-700 rounded-xl aspect-video flex flex-col items-center justify-center gap-2 text-neutral-500 hover:border-lime-400 cursor-pointer overflow-hidden transition-all">

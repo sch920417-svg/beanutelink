@@ -1,6 +1,6 @@
 import React from 'react';
 import { Icons } from '../../data/links';
-import { compressImage } from '../../utils';
+import { uploadCompressed } from '../../services/storage';
 
 const Icon = ({ name, size = 24, className = "" }) => {
   const Comp = Icons[name] || Icons.HelpCircle;
@@ -19,7 +19,7 @@ export function GallerySection({ config, updateConfig, showToast }) {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
     showToast('이미지 업로드 중...');
-    const compressedPromises = files.map(compressImage);
+    const compressedPromises = files.map(f => uploadCompressed(f, 'gallery'));
     const compressedUrls = await Promise.all(compressedPromises);
     const newImages = compressedUrls.map((url, i) => ({
       id: `gallery-${Date.now()}-${i}`,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Icons } from '../../data/links';
-import { compressImage } from '../../utils';
+import { uploadCompressed } from '../../services/storage';
 
 const Icon = ({ name, size = 24, className = "" }) => {
   const Comp = Icons[name] || Icons.HelpCircle;
@@ -30,7 +30,7 @@ export function ReviewSection({ config, updateConfig, showToast }) {
     const file = e.target.files[0];
     if (!file) return;
     showToast('이미지 업로드 중...');
-    const compressed = await compressImage(file);
+    const compressed = await uploadCompressed(file, 'reviews');
     update({ ...reviews, items: reviews.items.map(item => item.id === reviewId ? { ...item, image: compressed } : item) });
   };
 
