@@ -130,7 +130,11 @@ export default function App() {
           setSettings(prev => ({ ...prev, ...fsSettings }));
         }
         if (fsPageConfigs && Object.keys(fsPageConfigs).length > 0) {
-          setPageConfigs(fsPageConfigs);
+          setPageConfigs(prev => ({
+            ...prev,
+            ...fsPageConfigs,
+            home: fsPageConfigs.home || prev.home || initialPageConfigs.home,
+          }));
         }
         if (fsBlogs && Object.keys(fsBlogs).length > 0) {
           setBlogs(fsBlogs);
@@ -151,7 +155,12 @@ export default function App() {
         unsubPageConfigs = subscribePageConfigs((data) => {
           if (data && Object.keys(data).length > 0) {
             skipFirestoreSync.current = true;
-            setPageConfigs(data);
+            // home 탭이 Firestore에 없으면 initialPageConfigs에서 보충
+            setPageConfigs(prev => ({
+              ...initialPageConfigs,
+              ...data,
+              home: data.home || prev.home || initialPageConfigs.home,
+            }));
             setTimeout(() => { skipFirestoreSync.current = false; }, 100);
           }
         });
