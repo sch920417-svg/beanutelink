@@ -104,6 +104,16 @@ export default function App() {
   // ─── Firestore 읽기 + 실시간 리스너 (인증 불필요) ───
   useEffect(() => {
     let unsubSettings, unsubPageConfigs, unsubBlogs;
+    let dataLoadedSet = false;
+
+    // 5초 안전장치: Firestore 연결이 hang되면 초기 데이터로 진행
+    const safetyTimeout = setTimeout(() => {
+      if (!dataLoadedSet) {
+        console.warn('Firestore 로딩 타임아웃 — 초기 데이터로 진행');
+        dataLoadedSet = true;
+        setDataLoaded(true);
+      }
+    }, 5000);
 
     async function initData() {
       try {
@@ -125,6 +135,7 @@ export default function App() {
           setBlogs(fsBlogs);
         }
 
+        dataLoadedSet = true;
         setDataLoaded(true);
 
         // 3. 실시간 리스너 연결 (다른 탭/기기 변경 감지)
@@ -153,6 +164,7 @@ export default function App() {
         });
       } catch (err) {
         console.error('Firestore 초기 로드 실패:', err);
+        dataLoadedSet = true;
         setDataLoaded(true); // 폴백 데이터로 진행
       }
     }
@@ -160,6 +172,7 @@ export default function App() {
     initData();
 
     return () => {
+      clearTimeout(safetyTimeout);
       if (unsubSettings) unsubSettings();
       if (unsubPageConfigs) unsubPageConfigs();
       if (unsubBlogs) unsubBlogs();
