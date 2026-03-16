@@ -6,8 +6,6 @@ const Icon = ({ name, size = 24, className = "" }) => {
   return Comp ? <Comp size={size} className={className} /> : null;
 };
 
-const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
-
 export function VideoSection({ config, updateConfig, showToast }) {
   const videoData = config.video || { title: '영상', items: [] };
   const items = videoData.items || [];
@@ -16,37 +14,9 @@ export function VideoSection({ config, updateConfig, showToast }) {
     updateConfig('video', { ...videoData, ...newData });
   };
 
-  const handleVideoUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('video/')) {
-      showToast('영상 파일만 업로드 가능합니다.');
-      return;
-    }
-    if (file.size > MAX_VIDEO_SIZE) {
-      showToast(`영상 크기가 50MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
-      return;
-    }
-    showToast('영상 업로드 중...');
-    const objectUrl = URL.createObjectURL(file);
-    const newItem = {
-      id: `video-${Date.now()}`,
-      videoObjectUrl: objectUrl,
-      videoFileName: file.name,
-      videoFileSize: file.size,
-      url: '',
-      caption: '',
-    };
-    updateVideoData({ items: [...items, newItem] });
-    showToast('영상이 추가되었습니다.');
-  };
-
   const handleUrlAdd = () => {
     const newItem = {
       id: `video-${Date.now()}`,
-      videoObjectUrl: '',
-      videoFileName: '',
-      videoFileSize: 0,
       url: '',
       caption: '',
     };
@@ -58,8 +28,6 @@ export function VideoSection({ config, updateConfig, showToast }) {
   };
 
   const removeItem = (id) => {
-    const item = items.find(i => i.id === id);
-    if (item?.videoObjectUrl) URL.revokeObjectURL(item.videoObjectUrl);
     updateVideoData({ items: items.filter(i => i.id !== id) });
     showToast('영상이 삭제되었습니다.');
   };
@@ -79,24 +47,16 @@ export function VideoSection({ config, updateConfig, showToast }) {
       {/* 영상 목록 */}
       {items.map(item => (
         <div key={item.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3">
-          {item.videoObjectUrl ? (
-            <div className="relative rounded-lg overflow-hidden group">
-              <video src={item.videoObjectUrl} controls className="w-full" preload="metadata" />
-              <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-xs text-white">
-                {item.videoFileName} ({(item.videoFileSize / 1024 / 1024).toFixed(1)}MB)
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 focus-within:border-lime-500/50 transition-all">
-              <Icon name="MonitorPlay" size={16} className="text-neutral-500" />
-              <input
-                value={item.url || ''}
-                onChange={e => updateItem(item.id, { url: e.target.value })}
-                className="w-full text-sm bg-transparent outline-none text-neutral-200 placeholder-neutral-600"
-                placeholder="유튜브 또는 비메오 URL 입력"
-              />
-            </div>
-          )}
+          <div className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 focus-within:border-lime-500/50 transition-all">
+            <Icon name="MonitorPlay" size={16} className="text-neutral-500" />
+            <input
+              value={item.url || ''}
+              onChange={e => updateItem(item.id, { url: e.target.value })}
+              className="w-full text-sm bg-transparent outline-none text-neutral-200 placeholder-neutral-600"
+              placeholder="유튜브 URL 입력 (예: https://youtu.be/xxx)"
+            />
+          </div>
+          {item.url && <VideoUrlPreview url={item.url} />}
           <div className="flex gap-2">
             <input
               value={item.caption || ''}
@@ -112,15 +72,48 @@ export function VideoSection({ config, updateConfig, showToast }) {
       ))}
 
       {/* 추가 버튼 */}
-      <div className="flex gap-2">
-        <label className="flex-1 py-3 border-2 border-dashed border-neutral-700 rounded-xl text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors text-sm font-bold flex items-center justify-center gap-2 cursor-pointer">
-          <Icon name="Upload" size={16} /> 영상 파일 업로드
-          <input type="file" accept="video/mp4,video/quicktime,video/webm" className="hidden" onChange={handleVideoUpload} />
-        </label>
-        <button onClick={handleUrlAdd} className="flex-1 py-3 border-2 border-dashed border-neutral-700 rounded-xl text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors text-sm font-bold flex items-center justify-center gap-2">
-          <Icon name="Link" size={16} /> URL로 추가
-        </button>
-      </div>
+      <button onClick={handleUrlAdd} className="w-full py-3 border-2 border-dashed border-neutral-700 rounded-xl text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors text-sm font-bold flex items-center justify-center gap-2">
+        <Icon name="Link" size={16} /> YouTube URL 추가
+      </button>
     </div>
   );
+}
+
+function VideoUrlPreview({ url }) {
+  const embedUrl = getYouTubeEmbedUrl(url);
+  if (!embedUrl) {
+    return (
+      <div className="aspect-video bg-neutral-950 rounded-xl flex items-center justify-center text-neutral-500 border border-neutral-800">
+        <span className="text-sm">유효한 유튜브 URL을 입력하세요</span>
+      </div>
+    );
+  }
+  return (
+    <div className="aspect-video rounded-xl overflow-hidden">
+      <iframe
+        src={embedUrl}
+        className="w-full h-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        title="Video preview"
+      />
+    </div>
+  );
+}
+
+function getYouTubeEmbedUrl(url) {
+  if (!url) return null;
+  // youtube.com/watch?v=ID
+  let match = url.match(/(?:youtube\.com\/watch\?v=)([\w-]+)/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  // youtu.be/ID
+  match = url.match(/(?:youtu\.be\/)([\w-]+)/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  // youtube.com/embed/ID (already embed)
+  match = url.match(/(?:youtube\.com\/embed\/)([\w-]+)/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  // youtube.com/shorts/ID
+  match = url.match(/(?:youtube\.com\/shorts\/)([\w-]+)/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  return null;
 }

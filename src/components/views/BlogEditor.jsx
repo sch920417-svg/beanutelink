@@ -12,6 +12,19 @@ const Icon = ({ name, size = 24, className = "" }) => {
     return Comp ? <Comp size={size} className={className} /> : null;
 };
 
+function getYouTubeEmbedUrl(url) {
+    if (!url) return null;
+    let match = url.match(/(?:youtube\.com\/watch\?v=)([\w-]+)/);
+    if (match) return `https://www.youtube.com/embed/${match[1]}`;
+    match = url.match(/(?:youtu\.be\/)([\w-]+)/);
+    if (match) return `https://www.youtube.com/embed/${match[1]}`;
+    match = url.match(/(?:youtube\.com\/embed\/)([\w-]+)/);
+    if (match) return `https://www.youtube.com/embed/${match[1]}`;
+    match = url.match(/(?:youtube\.com\/shorts\/)([\w-]+)/);
+    if (match) return `https://www.youtube.com/embed/${match[1]}`;
+    return null;
+}
+
 // Tag Colors matching the provided requirements but suited for dark theme accents
 const TAG_COLORS = [
     "bg-red-500", "bg-orange-500", "bg-amber-500", "bg-lime-500", 
@@ -96,16 +109,6 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     );
 
-    // 언마운트 시 video objectURL 메모리 해제
-    useEffect(() => {
-        return () => {
-            post.blocks.forEach(block => {
-                if (block.videoObjectUrl) {
-                    URL.revokeObjectURL(block.videoObjectUrl);
-                }
-            });
-        };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const updatePost = (fields) => {
         setPost(prev => ({ ...prev, ...fields }));
@@ -132,7 +135,7 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
         const newBlock = { id: Math.random().toString(36).substring(2, 9), type, align: 'left', content: '' };
         if (type === 'image') newBlock.url = '';
         if (type === 'slider') newBlock.images = [];
-        if (type === 'video') { newBlock.url = ''; newBlock.videoMode = 'upload'; }
+        if (type === 'video') { newBlock.url = ''; }
         if (type === 'link') { newBlock.url = ''; newBlock.title = ''; newBlock.desc = ''; }
         if (type === 'beforeAfter') { newBlock.before = ''; newBlock.after = ''; }
         
@@ -180,30 +183,6 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
         showToast('블록 이미지 업로드 중...');
         const compressed = await uploadCompressed(file, 'blog');
         updateBlock(blockId, { [fieldName]: compressed });
-    };
-
-    const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
-
-    const handleBlockVideoUpload = (e, blockId) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        if (!file.type.startsWith('video/')) {
-            showToast('영상 파일만 업로드 가능합니다.');
-            return;
-        }
-        if (file.size > MAX_VIDEO_SIZE) {
-            showToast(`영상 크기가 50MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
-            return;
-        }
-        showToast('영상 업로드 중...');
-        const objectUrl = URL.createObjectURL(file);
-        updateBlock(blockId, {
-            videoObjectUrl: objectUrl,
-            videoFileName: file.name,
-            videoFileSize: file.size,
-            url: ''
-        });
-        showToast('영상이 추가되었습니다.');
     };
 
     const appendFormat = (block, tag) => {
@@ -308,8 +287,7 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
                                            removeBlock={removeBlock}
                                            moveBlock={moveBlock}
                                            handleBlockImageUpload={handleBlockImageUpload}
-                                           handleBlockVideoUpload={handleBlockVideoUpload}
-                                           appendFormat={appendFormat}
+                                                                                      appendFormat={appendFormat}
                                            showToast={showToast}
                                         />
                                     ))}
@@ -383,7 +361,7 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
 }
 
 // --- List Sorting Item Component ---
-const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, updateBlock, removeBlock, moveBlock, handleBlockImageUpload, handleBlockVideoUpload, appendFormat, showToast }) {
+const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, updateBlock, removeBlock, moveBlock, handleBlockImageUpload, appendFormat, showToast }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
     const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : 'auto', opacity: isDragging ? 0.8 : 1 };
 
@@ -490,95 +468,27 @@ const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, u
                 )}
                 {block.type === 'video' && (
                     <div className="mt-6 flex flex-col gap-3">
-                        {/* 모드 토글: URL vs 직접 업로드 */}
-                        <div className="flex gap-1 bg-neutral-950 w-fit p-1 rounded-lg border border-neutral-800">
-                            <button
-                                onClick={() => updateBlock(block.id, { videoMode: 'upload' })}
-                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
-                                    (block.videoMode || 'upload') === 'upload'
-                                        ? 'bg-neutral-800 text-white shadow-sm'
-                                        : 'text-neutral-500 hover:text-white'
-                                }`}
-                            >
-                                직접 업로드
-                            </button>
-                            <button
-                                onClick={() => updateBlock(block.id, { videoMode: 'url' })}
-                                className={`px-3 py-1.5 rounded-md text-xs font-bold transition-colors ${
-                                    block.videoMode === 'url'
-                                        ? 'bg-neutral-800 text-white shadow-sm'
-                                        : 'text-neutral-500 hover:text-white'
-                                }`}
-                            >
-                                URL 입력
-                            </button>
+                        <div className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 focus-within:border-lime-500/50 transition-all">
+                            <Icon name="MonitorPlay" size={16} className="text-neutral-500" />
+                            <input
+                                value={block.url || ''}
+                                onChange={e => updateBlock(block.id, { url: e.target.value })}
+                                className="w-full text-sm bg-transparent outline-none text-neutral-200 placeholder-neutral-600 font-medium"
+                                placeholder="유튜브 URL 입력 (예: https://youtu.be/xxx)"
+                            />
                         </div>
-
-                        {/* URL 입력 모드 */}
-                        {block.videoMode === 'url' && (
-                            <>
-                                <div className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 focus-within:border-lime-500/50 transition-all">
-                                    <Icon name="MonitorPlay" size={16} className="text-neutral-500" />
-                                    <input
-                                        value={block.url || ''}
-                                        onChange={e => updateBlock(block.id, { url: e.target.value })}
-                                        className="w-full text-sm bg-transparent outline-none text-neutral-200 placeholder-neutral-600 font-medium"
-                                        placeholder="유튜브 영상 링크 또는 비메오 URL 입력"
-                                    />
+                        {block.url && (() => {
+                            const embedUrl = getYouTubeEmbedUrl(block.url);
+                            return embedUrl ? (
+                                <div className="w-full aspect-video rounded-xl overflow-hidden">
+                                    <iframe src={embedUrl} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Video preview" />
                                 </div>
-                                {block.url && (
-                                    <div className="w-full aspect-video rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center text-neutral-500 mt-2">
-                                        <span className="text-sm font-bold tracking-wider">비디오 렌더링 영역</span>
-                                    </div>
-                                )}
-                            </>
-                        )}
-
-                        {/* 직접 업로드 모드 */}
-                        {(block.videoMode || 'upload') === 'upload' && (
-                            <>
-                                {block.videoObjectUrl ? (
-                                    <div className="relative w-full rounded-xl overflow-hidden border border-neutral-700 group">
-                                        <video
-                                            src={block.videoObjectUrl}
-                                            controls
-                                            className="w-full max-h-[400px]"
-                                            preload="metadata"
-                                        />
-                                        <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                onClick={() => {
-                                                    URL.revokeObjectURL(block.videoObjectUrl);
-                                                    updateBlock(block.id, {
-                                                        videoObjectUrl: '',
-                                                        videoFileName: '',
-                                                        videoFileSize: 0
-                                                    });
-                                                }}
-                                                className="p-2 bg-black/60 text-white rounded-lg hover:bg-red-500 transition-colors"
-                                            >
-                                                <Icon name="Trash2" size={16} />
-                                            </button>
-                                        </div>
-                                        <div className="absolute bottom-2 left-2 bg-black/60 px-2.5 py-1 rounded-lg text-xs text-white font-medium">
-                                            {block.videoFileName} ({(block.videoFileSize / 1024 / 1024).toFixed(1)}MB)
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <label className="w-full h-48 border-2 border-dashed border-neutral-700 flex flex-col items-center justify-center rounded-xl cursor-pointer hover:bg-neutral-800/50 text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors">
-                                        <Icon name="MonitorPlay" size={32} className="mb-2" />
-                                        <span className="text-sm font-bold">영상 파일 업로드</span>
-                                        <span className="text-xs text-neutral-600 mt-1">MP4, MOV, WebM (최대 50MB)</span>
-                                        <input
-                                            type="file"
-                                            accept="video/mp4,video/quicktime,video/webm"
-                                            className="hidden"
-                                            onChange={e => handleBlockVideoUpload(e, block.id)}
-                                        />
-                                    </label>
-                                )}
-                            </>
-                        )}
+                            ) : (
+                                <div className="w-full aspect-video rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center text-neutral-500">
+                                    <span className="text-sm">유효한 유튜브 URL을 입력하세요</span>
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
                 {block.type === 'quote' && (

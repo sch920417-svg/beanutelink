@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Icons } from '../../data/links';
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Volume2, VolumeX, Home, ShoppingBag, BookOpen, MessageCircle, Phone, Clock, Check } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Home, ShoppingBag, BookOpen, MessageCircle, Phone, Clock, Check } from 'lucide-react';
 import ServiceHeader from '../service/ServiceHeader';
 import HeroSlider from '../service/HeroSlider';
 import ShootingGuide from '../service/ShootingGuide';
@@ -14,6 +14,19 @@ const Icon = ({ name, size = 24, className = "" }) => {
   const Comp = Icons[name] || Icons.HelpCircle;
   return Comp ? <Comp size={size} className={className} /> : null;
 };
+
+function getYouTubeEmbedUrl(url) {
+  if (!url) return null;
+  let match = url.match(/(?:youtube\.com\/watch\?v=)([\w-]+)/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  match = url.match(/(?:youtu\.be\/)([\w-]+)/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  match = url.match(/(?:youtube\.com\/embed\/)([\w-]+)/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  match = url.match(/(?:youtube\.com\/shorts\/)([\w-]+)/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  return null;
+}
 
 // ─── 슬라이더 블록 (카드형 캐러셀 — 스와이프 + 버튼) ──────────
 function SliderBlock({ block }) {
@@ -217,16 +230,18 @@ function BlogDetailView({ post, onBack }) {
           </div>
         );
       case 'video':
-        if (block.videoObjectUrl) {
+        if (block.url) {
+          const embedUrl = getYouTubeEmbedUrl(block.url);
+          if (embedUrl) {
+            return (
+              <div key={idx} className="aspect-video rounded-xl overflow-hidden">
+                <iframe src={embedUrl} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Video" />
+              </div>
+            );
+          }
           return (
-            <div key={idx} className="rounded-xl overflow-hidden">
-              <VideoPreviewItem item={block} />
-            </div>
-          );
-        } else if (block.url) {
-          return (
-            <div key={idx} className="aspect-video bg-neutral-900 rounded-xl flex items-center justify-center text-neutral-400">
-              <span className="text-sm">외부 영상: {block.url}</span>
+            <div key={idx} className="aspect-video bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 border border-neutral-200">
+              <span className="text-sm">영상: {block.url}</span>
             </div>
           );
         }
@@ -297,43 +312,18 @@ function BlogDetailView({ post, onBack }) {
 
 // ─── 간단한 미리보기 컴포넌트 (video, gallery, review, faq, priceTable) ──
 function VideoPreviewItem({ item }) {
-  const videoRef = useRef(null);
-  const [muted, setMuted] = useState(true);
-
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !muted;
-      setMuted(!muted);
-    }
-  };
-
-  if (item.videoObjectUrl) {
-    return (
-      <div className="relative rounded-xl overflow-hidden">
-        <video
-          ref={videoRef}
-          src={item.videoObjectUrl}
-          autoPlay
-          muted={muted}
-          loop
-          playsInline
-          className="w-full"
-          preload="metadata"
-        />
-        <button
-          onClick={toggleMute}
-          className="absolute bottom-3 right-3 w-8 h-8 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-        >
-          {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-        </button>
-      </div>
-    );
-  }
-
   if (item.url) {
+    const embedUrl = getYouTubeEmbedUrl(item.url);
+    if (embedUrl) {
+      return (
+        <div className="aspect-video rounded-xl overflow-hidden">
+          <iframe src={embedUrl} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Video" />
+        </div>
+      );
+    }
     return (
       <div className="aspect-video bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 border border-neutral-200">
-        <span className="text-sm">외부 영상: {item.url}</span>
+        <span className="text-sm">영상: {item.url}</span>
       </div>
     );
   }
