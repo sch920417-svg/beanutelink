@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Icons } from '../../data/links';
-import { uploadVideo } from '../../services/storage';
 
 const Icon = ({ name, size = 24, className = "" }) => {
   const Comp = Icons[name] || Icons.HelpCircle;
@@ -9,61 +8,46 @@ const Icon = ({ name, size = 24, className = "" }) => {
 
 const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
-export function VideoSection({ config, updateConfig, showToast, activeTab }) {
+export function VideoSection({ config, updateConfig, showToast }) {
   const videoData = config.video || { title: '영상', items: [] };
   const items = videoData.items || [];
-  const [uploading, setUploading] = useState(false);
 
   const updateVideoData = (newData) => {
     updateConfig('video', { ...videoData, ...newData });
   };
 
-  const handleVideoUpload = async (e) => {
+  const handleVideoUpload = (e) => {
     const file = e.target.files[0];
-    e.target.value = ''; // 같은 파일 재업로드 허용
     if (!file) return;
     if (!file.type.startsWith('video/')) {
-      showToast('영상 파일만 업로드 가능합니다.', 'error');
+      showToast('영상 파일만 업로드 가능합니다.');
       return;
     }
     if (file.size > MAX_VIDEO_SIZE) {
-      showToast(`영상 크기가 50MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(1)}MB)`, 'error');
+      showToast(`영상 크기가 50MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
       return;
     }
-
-    setUploading(true);
-    const fileSize = (file.size / 1024 / 1024).toFixed(1);
-
-    try {
-      showToast(`영상 업로드 중... (${fileSize}MB)`, 'loading', 0);
-
-      // Firebase Storage에 직접 업로드
-      const category = activeTab || 'video';
-      const url = await uploadVideo(file, category);
-
-      const newItem = {
-        id: `video-${Date.now()}`,
-        url,
-        videoFileName: file.name,
-        videoFileSize: file.size,
-        caption: '',
-      };
-      updateVideoData({ items: [...items, newItem] });
-      showToast(`영상 업로드 완료! (${fileSize}MB)`, 'success', 3000);
-    } catch (err) {
-      console.error('영상 업로드 실패:', err);
-      showToast('영상 업로드 실패: ' + err.message, 'error', 5000);
-    } finally {
-      setUploading(false);
-    }
+    showToast('영상 업로드 중...');
+    const objectUrl = URL.createObjectURL(file);
+    const newItem = {
+      id: `video-${Date.now()}`,
+      videoObjectUrl: objectUrl,
+      videoFileName: file.name,
+      videoFileSize: file.size,
+      url: '',
+      caption: '',
+    };
+    updateVideoData({ items: [...items, newItem] });
+    showToast('영상이 추가되었습니다.');
   };
 
   const handleUrlAdd = () => {
     const newItem = {
       id: `video-${Date.now()}`,
-      url: '',
+      videoObjectUrl: '',
       videoFileName: '',
       videoFileSize: 0,
+      url: '',
       caption: '',
     };
     updateVideoData({ items: [...items, newItem] });
@@ -74,6 +58,8 @@ export function VideoSection({ config, updateConfig, showToast, activeTab }) {
   };
 
   const removeItem = (id) => {
+    const item = items.find(i => i.id === id);
+    if (item?.videoObjectUrl) URL.revokeObjectURL(item.videoObjectUrl);
     updateVideoData({ items: items.filter(i => i.id !== id) });
     showToast('영상이 삭제되었습니다.');
   };
@@ -93,14 +79,12 @@ export function VideoSection({ config, updateConfig, showToast, activeTab }) {
       {/* 영상 목록 */}
       {items.map(item => (
         <div key={item.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3">
-          {item.url ? (
+          {item.videoObjectUrl ? (
             <div className="relative rounded-lg overflow-hidden group">
-              <video src={item.url} controls className="w-full" preload="metadata" />
-              {item.videoFileName && (
-                <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-xs text-white">
-                  {item.videoFileName} ({(item.videoFileSize / 1024 / 1024).toFixed(1)}MB)
-                </div>
-              )}
+              <video src={item.videoObjectUrl} controls className="w-full" preload="metadata" />
+              <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-xs text-white">
+                {item.videoFileName} ({(item.videoFileSize / 1024 / 1024).toFixed(1)}MB)
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 focus-within:border-lime-500/50 transition-all">
@@ -129,13 +113,11 @@ export function VideoSection({ config, updateConfig, showToast, activeTab }) {
 
       {/* 추가 버튼 */}
       <div className="flex gap-2">
-        <label className={`flex-1 py-3 border-2 border-dashed border-neutral-700 rounded-xl text-sm font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors ${
-          uploading ? 'opacity-50 pointer-events-none text-neutral-600' : 'text-neutral-500 hover:text-lime-400 hover:border-lime-500/50'
-        }`}>
-          <Icon name="Upload" size={16} /> {uploading ? '처리 중...' : '영상 파일 업로드'}
-          <input type="file" accept="video/mp4,video/quicktime,video/webm" className="hidden" onChange={handleVideoUpload} disabled={uploading} />
+        <label className="flex-1 py-3 border-2 border-dashed border-neutral-700 rounded-xl text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors text-sm font-bold flex items-center justify-center gap-2 cursor-pointer">
+          <Icon name="Upload" size={16} /> 영상 파일 업로드
+          <input type="file" accept="video/mp4,video/quicktime,video/webm" className="hidden" onChange={handleVideoUpload} />
         </label>
-        <button onClick={handleUrlAdd} disabled={uploading} className="flex-1 py-3 border-2 border-dashed border-neutral-700 rounded-xl text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50">
+        <button onClick={handleUrlAdd} className="flex-1 py-3 border-2 border-dashed border-neutral-700 rounded-xl text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors text-sm font-bold flex items-center justify-center gap-2">
           <Icon name="Link" size={16} /> URL로 추가
         </button>
       </div>
