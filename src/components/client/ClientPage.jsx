@@ -85,7 +85,7 @@ export default function ClientPage() {
   );
 
   const effectiveTab = activeTab;
-  const config = pageConfigs[effectiveTab];
+  const config = pageConfigs[effectiveTab] || initialPageConfigs[effectiveTab];
 
   // 스플래시 타이머
   useEffect(() => {
@@ -104,8 +104,8 @@ export default function ClientPage() {
     }
   }, [showSplash]);
 
-  // config가 없으면 (데이터 미로드) 로딩 표시
-  if (!config) {
+  // config가 없으면 (초기 데이터도 없는 경우) 로딩 표시
+  if (!config && !dataReady) {
     return (
       <div className="min-h-screen bg-neutral-100 flex justify-center">
         <div className="w-full max-w-[430px] bg-white min-h-screen flex items-center justify-center">
