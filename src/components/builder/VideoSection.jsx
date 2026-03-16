@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Icons } from '../../data/links';
-import { compressVideo } from '../../services/videoCompress';
 import { uploadVideo } from '../../services/storage';
 
 const Icon = ({ name, size = 24, className = "" }) => {
@@ -8,7 +7,7 @@ const Icon = ({ name, size = 24, className = "" }) => {
   return Comp ? <Comp size={size} className={className} /> : null;
 };
 
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB (압축 전 원본 한도)
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
 export function VideoSection({ config, updateConfig, showToast, activeTab }) {
   const videoData = config.video || { title: '영상', items: [] };
@@ -28,37 +27,29 @@ export function VideoSection({ config, updateConfig, showToast, activeTab }) {
       return;
     }
     if (file.size > MAX_VIDEO_SIZE) {
-      showToast(`영상 크기가 100MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(1)}MB)`, 'error');
+      showToast(`영상 크기가 50MB를 초과합니다. (${(file.size / 1024 / 1024).toFixed(1)}MB)`, 'error');
       return;
     }
 
     setUploading(true);
-    const originalSize = (file.size / 1024 / 1024).toFixed(1);
+    const fileSize = (file.size / 1024 / 1024).toFixed(1);
 
     try {
-      // 1단계: FFmpeg로 영상 압축
-      showToast(`영상 압축 중... (원본 ${originalSize}MB)`, 'loading', 0);
-      const compressedBlob = await compressVideo(file, (progress) => {
-        showToast(`영상 압축 중... ${progress}%`, 'loading', 0);
-      });
+      showToast(`영상 업로드 중... (${fileSize}MB)`, 'loading', 0);
 
-      const compressedSize = (compressedBlob.size / 1024 / 1024).toFixed(1);
-      showToast(`압축 완료 (${originalSize}MB → ${compressedSize}MB). 업로드 중...`, 'loading', 0);
-
-      // 2단계: Firebase Storage에 업로드
+      // Firebase Storage에 직접 업로드
       const category = activeTab || 'video';
-      const url = await uploadVideo(compressedBlob, category);
+      const url = await uploadVideo(file, category);
 
-      // 3단계: 설정에 Storage URL 저장
       const newItem = {
         id: `video-${Date.now()}`,
         url,
         videoFileName: file.name,
-        videoFileSize: compressedBlob.size,
+        videoFileSize: file.size,
         caption: '',
       };
       updateVideoData({ items: [...items, newItem] });
-      showToast(`영상 업로드 완료! (${compressedSize}MB)`, 'success', 3000);
+      showToast(`영상 업로드 완료! (${fileSize}MB)`, 'success', 3000);
     } catch (err) {
       console.error('영상 업로드 실패:', err);
       showToast('영상 업로드 실패: ' + err.message, 'error', 5000);
