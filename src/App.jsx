@@ -97,36 +97,28 @@ export default function App() {
     return unsub;
   }, []);
 
-  // ─── Firestore 초기 로드 + 실시간 리스너 ───
+  // ─── Firestore 읽기 + 실시간 리스너 (인증 불필요) ───
   useEffect(() => {
     let unsubSettings, unsubPageConfigs, unsubBlogs;
 
     async function initData() {
       try {
-        // 1. Firestore에서 데이터 로드
+        // 1. Firestore에서 데이터 로드 (읽기만 — 누구나 가능)
         const [fsSettings, fsPageConfigs, fsBlogs] = await Promise.all([
           loadSettings(),
           loadAllPageConfigs(),
           loadAllBlogs(),
         ]);
 
-        // 2. Firestore에 데이터가 있으면 사용, 없으면 초기 데이터 저장
+        // 2. 데이터가 있으면 state에 반영
         if (fsSettings) {
           setSettings(prev => ({ ...prev, ...fsSettings }));
-        } else {
-          await saveSettings(defaultSettings);
         }
-
         if (fsPageConfigs && Object.keys(fsPageConfigs).length > 0) {
           setPageConfigs(fsPageConfigs);
-        } else {
-          await saveAllPageConfigs(initialPageConfigs);
         }
-
         if (fsBlogs && Object.keys(fsBlogs).length > 0) {
           setBlogs(fsBlogs);
-        } else {
-          await saveAllBlogs(initialBlogs);
         }
 
         setDataLoaded(true);
@@ -169,6 +161,43 @@ export default function App() {
       if (unsubBlogs) unsubBlogs();
     };
   }, []);
+
+  // ─── 관리자 로그인 시 초기 데이터 시드 (Firestore가 비어있을 때만) ───
+  const seedAttempted = useRef(false);
+  useEffect(() => {
+    if (!user || !dataLoaded || seedAttempted.current) return;
+    seedAttempted.current = true;
+
+    async function seedIfEmpty() {
+      try {
+        const [fsSettings, fsPageConfigs, fsBlogs] = await Promise.all([
+          loadSettings(),
+          loadAllPageConfigs(),
+          loadAllBlogs(),
+        ]);
+
+        const promises = [];
+        if (!fsSettings) {
+          promises.push(saveSettings(defaultSettings));
+        }
+        if (!fsPageConfigs || Object.keys(fsPageConfigs).length === 0) {
+          promises.push(saveAllPageConfigs(initialPageConfigs));
+        }
+        if (!fsBlogs || Object.keys(fsBlogs).length === 0) {
+          promises.push(saveAllBlogs(initialBlogs));
+        }
+
+        if (promises.length > 0) {
+          await Promise.all(promises);
+          console.log('초기 데이터 시드 완료');
+        }
+      } catch (err) {
+        console.error('초기 데이터 시드 실패:', err);
+      }
+    }
+
+    seedIfEmpty();
+  }, [user, dataLoaded]);
 
   // ─── settings 변경 시 Firestore + localStorage 동기화 ───
   useEffect(() => {
