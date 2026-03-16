@@ -731,7 +731,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="fixed inset-0 bg-black/40 z-[55]"
                 onClick={() => setBottomSheet(null)}
               />
@@ -739,10 +739,15 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                transition={{ type: 'spring', damping: 32, stiffness: 280, mass: 0.8 }}
+                drag="y"
+                dragConstraints={{ top: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(_, info) => { if (info.offset.y > 80 || info.velocity.y > 300) setBottomSheet(null); }}
                 className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[1.5rem] z-[56] shadow-2xl"
+                style={{ willChange: 'transform' }}
               >
-                <div className="flex justify-center pt-3 pb-1">
+                <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
                   <div className="w-10 h-1 rounded-full bg-neutral-300" />
                 </div>
                 <div className="px-5 pt-2 pb-3">
@@ -791,7 +796,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 className="fixed inset-0 bg-black/40 z-[55]"
                 onClick={() => setBottomSheet(null)}
               />
@@ -799,10 +804,15 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                transition={{ type: 'spring', damping: 32, stiffness: 280, mass: 0.8 }}
+                drag="y"
+                dragConstraints={{ top: 0 }}
+                dragElastic={0.2}
+                onDragEnd={(_, info) => { if (info.offset.y > 80 || info.velocity.y > 300) setBottomSheet(null); }}
                 className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[1.5rem] z-[56] shadow-2xl"
+                style={{ willChange: 'transform' }}
               >
-                <div className="flex justify-center pt-3 pb-1">
+                <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
                   <div className="w-10 h-1 rounded-full bg-neutral-300" />
                 </div>
                 <div className="px-5 pt-2 pb-3">
