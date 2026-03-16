@@ -719,21 +719,21 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
             <>
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1, transition: { duration: 0.3, ease: [0.0, 0.0, 0.2, 1] } }}
-                exit={{ opacity: 0, transition: { duration: 0.2, ease: [0.4, 0.0, 1, 1] } }}
+                animate={{ opacity: 1, transition: { duration: 0.2, ease: [0.2, 0, 0, 1] } }}
+                exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
                 className="fixed inset-0 bg-black/40 z-[55]"
                 onClick={() => setBottomSheet(null)}
               />
               <motion.div
                 initial={{ y: '100%' }}
-                animate={{ y: 0, transition: { type: 'tween', duration: 0.38, ease: [0.0, 0.0, 0.2, 1] } }}
-                exit={{ y: '100%', transition: { type: 'tween', duration: 0.28, ease: [0.4, 0.0, 1, 1] } }}
+                animate={{ y: 0, transition: { duration: 0.28, ease: [0.2, 0, 0, 1] } }}
+                exit={{ y: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
                 drag="y"
                 dragConstraints={{ top: 0 }}
-                dragElastic={0.15}
+                dragElastic={0.12}
                 onDragEnd={(_, info) => { if (info.offset.y > 80 || info.velocity.y > 300) setBottomSheet(null); }}
                 className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[1.5rem] z-[56] shadow-2xl"
-                style={{ willChange: 'transform' }}
+                style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
               >
                 <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
                   <div className="w-10 h-1 rounded-full bg-neutral-300" />
@@ -782,21 +782,21 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
             <>
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1, transition: { duration: 0.3, ease: [0.0, 0.0, 0.2, 1] } }}
-                exit={{ opacity: 0, transition: { duration: 0.2, ease: [0.4, 0.0, 1, 1] } }}
+                animate={{ opacity: 1, transition: { duration: 0.2, ease: [0.2, 0, 0, 1] } }}
+                exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
                 className="fixed inset-0 bg-black/40 z-[55]"
                 onClick={() => setBottomSheet(null)}
               />
               <motion.div
                 initial={{ y: '100%' }}
-                animate={{ y: 0, transition: { type: 'tween', duration: 0.38, ease: [0.0, 0.0, 0.2, 1] } }}
-                exit={{ y: '100%', transition: { type: 'tween', duration: 0.28, ease: [0.4, 0.0, 1, 1] } }}
+                animate={{ y: 0, transition: { duration: 0.28, ease: [0.2, 0, 0, 1] } }}
+                exit={{ y: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
                 drag="y"
                 dragConstraints={{ top: 0 }}
-                dragElastic={0.15}
+                dragElastic={0.12}
                 onDragEnd={(_, info) => { if (info.offset.y > 80 || info.velocity.y > 300) setBottomSheet(null); }}
                 className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white rounded-t-[1.5rem] z-[56] shadow-2xl"
-                style={{ willChange: 'transform' }}
+                style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}
               >
                 <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
                   <div className="w-10 h-1 rounded-full bg-neutral-300" />
@@ -936,16 +936,17 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
             <>
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1, transition: { duration: 0.3, ease: [0.0, 0.0, 0.2, 1] } }}
-                exit={{ opacity: 0, transition: { duration: 0.2, ease: [0.4, 0.0, 1, 1] } }}
+                animate={{ opacity: 1, transition: { duration: 0.2, ease: [0.2, 0, 0, 1] } }}
+                exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
                 className="absolute inset-0 bg-black/40 z-[55]"
                 onClick={() => setBottomSheet(null)}
               />
               <motion.div
                 initial={{ y: '100%' }}
-                animate={{ y: 0, transition: { type: 'tween', duration: 0.38, ease: [0.0, 0.0, 0.2, 1] } }}
-                exit={{ y: '100%', transition: { type: 'tween', duration: 0.28, ease: [0.4, 0.0, 1, 1] } }}
+                animate={{ y: 0, transition: { duration: 0.28, ease: [0.2, 0, 0, 1] } }}
+                exit={{ y: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
                 className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[1.5rem] z-[56] shadow-2xl"
+                style={{ backfaceVisibility: 'hidden' }}
               >
                 {/* 핸들 바 */}
                 <div className="flex justify-center pt-2 pb-1">
@@ -999,16 +1000,17 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
             <>
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: 1, transition: { duration: 0.3, ease: [0.0, 0.0, 0.2, 1] } }}
-                exit={{ opacity: 0, transition: { duration: 0.2, ease: [0.4, 0.0, 1, 1] } }}
+                animate={{ opacity: 1, transition: { duration: 0.2, ease: [0.2, 0, 0, 1] } }}
+                exit={{ opacity: 0, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } }}
                 className="absolute inset-0 bg-black/40 z-[55]"
                 onClick={() => setBottomSheet(null)}
               />
               <motion.div
                 initial={{ y: '100%' }}
-                animate={{ y: 0, transition: { type: 'tween', duration: 0.38, ease: [0.0, 0.0, 0.2, 1] } }}
-                exit={{ y: '100%', transition: { type: 'tween', duration: 0.28, ease: [0.4, 0.0, 1, 1] } }}
+                animate={{ y: 0, transition: { duration: 0.28, ease: [0.2, 0, 0, 1] } }}
+                exit={{ y: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
                 className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[1.5rem] z-[56] shadow-2xl"
+                style={{ backfaceVisibility: 'hidden' }}
               >
                 {/* 핸들 바 */}
                 <div className="flex justify-center pt-2 pb-1">
