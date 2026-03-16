@@ -9,6 +9,7 @@ import {
   loadSettings, saveSettings, subscribeSettings,
   loadAllPageConfigs, saveAllPageConfigs, savePageConfig, subscribePageConfigs,
   loadAllBlogs, saveAllBlogs, saveBlogs, subscribeBlogs,
+  testFirestoreWrite,
 } from './services/firestore';
 import './index.css';
 
@@ -248,15 +249,22 @@ export default function App() {
     }
   }, []);
 
-  // base64 데이터(data:image/...)를 제거하여 Firestore 1MB 한도 방지
-  const cleanBase64FromConfigs = (configs) => {
-    const cleaned = JSON.parse(JSON.stringify(configs));
+  // Firestore에 저장하기 전 데이터 정리:
+  // 1) base64 이미지 제거  2) blob: URL 제거  3) 10KB 이상 문자열 제거
+  const cleanForFirestore = (data) => {
+    const cleaned = JSON.parse(JSON.stringify(data));
     const clean = (obj) => {
       if (!obj || typeof obj !== 'object') return obj;
       if (Array.isArray(obj)) return obj.map(clean);
       for (const key of Object.keys(obj)) {
-        if (typeof obj[key] === 'string' && obj[key].startsWith('data:image/')) {
-          obj[key] = ''; // base64 → 빈 문자열로 교체
+        if (typeof obj[key] === 'string') {
+          const val = obj[key];
+          if (val.startsWith('data:image/') || val.startsWith('data:application/') || val.startsWith('blob:')) {
+            obj[key] = '';
+          } else if (val.length > 10000) {
+            console.warn(`[정리] 큰 문자열 제거: key="${key}", length=${val.length}`);
+            obj[key] = '';
+          }
         } else if (typeof obj[key] === 'object') {
           obj[key] = clean(obj[key]);
         }
@@ -276,23 +284,55 @@ export default function App() {
   const handleDeploy = async () => {
     if (isDeploying) return;
     setIsDeploying(true);
-    showToast('변경사항 배포 중... 잠시만 기다려주세요.', 'loading', 0);
+    showToast('서버 연결 확인 중...', 'loading', 0);
     try {
-      // base64 이미지가 남아있으면 제거 (Firestore 1MB 초과 방지)
-      const cleanedConfigs = cleanBase64FromConfigs(pageConfigs);
+      // 0. Firestore 연결 테스트
+      await withTimeout(testFirestoreWrite(), 5000);
+      console.log('[배포] Firestore 연결 OK');
 
-      showToast('페이지 설정 저장 중... (1/3)', 'loading', 0);
-      await withTimeout(saveAllPageConfigs(cleanedConfigs), 15000);
+      // 1. 데이터 정리
+      const cleanedConfigs = cleanForFirestore(pageConfigs);
+      const cleanedSettings = cleanForFirestore(settings);
+      const cleanedBlogs = cleanForFirestore(blogs);
 
-      showToast('환경 설정 저장 중... (2/3)', 'loading', 0);
-      await withTimeout(saveSettings(settings), 15000);
+      // 2. 개별 탭 문서를 순차적으로 저장 (어느 탭이 실패하는지 파악)
+      const tabEntries = Object.entries(cleanedConfigs);
+      for (let i = 0; i < tabEntries.length; i++) {
+        const [tabId, config] = tabEntries[i];
+        const size = JSON.stringify(config).length;
+        showToast(`페이지 저장 중... (${i + 1}/${tabEntries.length}) [${tabId}: ${Math.round(size / 1024)}KB]`, 'loading', 0);
+        console.log(`[배포] 탭 "${tabId}" 저장 시작 (${size} bytes)`);
 
-      showToast('블로그 저장 중... (3/3)', 'loading', 0);
-      await withTimeout(saveAllBlogs(blogs), 15000);
+        if (size > 900000) {
+          console.error(`[배포] 탭 "${tabId}" 크기 초과 (${size} bytes) — 건너뜀`);
+          continue;
+        }
+
+        await withTimeout(savePageConfig(tabId, config), 10000);
+        console.log(`[배포] 탭 "${tabId}" 저장 완료`);
+      }
+
+      // 3. 설정 저장
+      const settingsSize = JSON.stringify(cleanedSettings).length;
+      showToast(`환경 설정 저장 중... [${Math.round(settingsSize / 1024)}KB]`, 'loading', 0);
+      console.log(`[배포] settings 저장 시작 (${settingsSize} bytes)`);
+      await withTimeout(saveSettings(cleanedSettings), 10000);
+      console.log('[배포] settings 저장 완료');
+
+      // 4. 블로그 저장
+      const blogEntries = Object.entries(cleanedBlogs);
+      for (let i = 0; i < blogEntries.length; i++) {
+        const [productId, posts] = blogEntries[i];
+        const size = JSON.stringify(posts).length;
+        showToast(`블로그 저장 중... (${i + 1}/${blogEntries.length})`, 'loading', 0);
+        console.log(`[배포] 블로그 "${productId}" 저장 시작 (${size} bytes)`);
+        await withTimeout(saveBlogs(productId, posts), 10000);
+        console.log(`[배포] 블로그 "${productId}" 저장 완료`);
+      }
 
       showToast('변경사항이 성공적으로 배포되었습니다!', 'success', 4000);
     } catch (err) {
-      console.error('배포 실패:', err);
+      console.error('[배포] 실패:', err);
       showToast('배포 실패: ' + err.message, 'error', 8000);
     } finally {
       setIsDeploying(false);

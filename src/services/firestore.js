@@ -1,8 +1,13 @@
 import { db } from '../firebase';
 import {
   doc, setDoc, getDoc, getDocs,
-  collection, onSnapshot, deleteDoc,
+  collection, onSnapshot, deleteDoc, writeBatch,
 } from 'firebase/firestore';
+
+// ─── 연결 테스트 ─────────────────────────────────────────────
+export async function testFirestoreWrite() {
+  await setDoc(doc(db, '_ping', 'test'), { t: Date.now() });
+}
 
 // ─── Settings ────────────────────────────────────────────────
 export async function saveSettings(settings) {
@@ -26,10 +31,11 @@ export async function savePageConfig(tabId, config) {
 }
 
 export async function saveAllPageConfigs(pageConfigs) {
-  const promises = Object.entries(pageConfigs).map(([tabId, config]) =>
-    setDoc(doc(db, 'pageConfigs', tabId), config)
-  );
-  await Promise.all(promises);
+  const batch = writeBatch(db);
+  Object.entries(pageConfigs).forEach(([tabId, config]) => {
+    batch.set(doc(db, 'pageConfigs', tabId), config);
+  });
+  await batch.commit();
 }
 
 export async function deletePageConfig(tabId) {
@@ -57,10 +63,11 @@ export async function saveBlogs(productId, blogs) {
 }
 
 export async function saveAllBlogs(allBlogs) {
-  const promises = Object.entries(allBlogs).map(([productId, posts]) =>
-    setDoc(doc(db, 'blogs', productId), { posts })
-  );
-  await Promise.all(promises);
+  const batch = writeBatch(db);
+  Object.entries(allBlogs).forEach(([productId, posts]) => {
+    batch.set(doc(db, 'blogs', productId), { posts });
+  });
+  await batch.commit();
 }
 
 export async function loadAllBlogs() {
