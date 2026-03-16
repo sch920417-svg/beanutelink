@@ -752,7 +752,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                     {bottomSheet === 'chat' && (settings.chatGreeting || '상품별 카카오톡 채널로 이동')}
                   </p>
                 </div>
-                <div className="px-5 pb-5 space-y-1 pb-[env(safe-area-inset-bottom,16px)]">
+                <div className="px-5 pb-8 space-y-1 pb-[max(2rem,env(safe-area-inset-bottom,2rem))]">
                   {productTabs.map((tab) => {
                     const isSelected = effectiveTab === tab.id;
                     return (
@@ -830,7 +830,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                       </div>
                     </div>
                   )}
-                  {settings.phone ? (
+                  {settings.phone && (
                     <a
                       href={`tel:${(settings.phone || '').replace(/-/g, '')}`}
                       className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-colors"
@@ -838,10 +838,6 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                       <Phone size={16} />
                       <span>전화 연결하기</span>
                     </a>
-                  ) : (
-                    <div className="text-center py-2 text-neutral-400 text-[11px]">
-                      환경설정에서 전화번호를 등록해주세요.
-                    </div>
                   )}
                 </div>
               </motion.div>
@@ -974,7 +970,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                 </div>
 
                 {/* 상품 목록 */}
-                <div className="px-5 pb-5 space-y-1">
+                <div className="px-5 pb-8 space-y-1">
                   {productTabs.map((tab) => {
                     const isSelected = effectiveTab === tab.id;
                     return (
@@ -1060,7 +1056,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                   )}
 
                   {/* 연결 버튼 */}
-                  {settings.phone ? (
+                  {settings.phone && (
                     <a
                       href={`tel:${(settings.phone || '').replace(/-/g, '')}`}
                       className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 transition-colors"
@@ -1068,10 +1064,6 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                       <Phone size={16} />
                       <span>전화 연결하기</span>
                     </a>
-                  ) : (
-                    <div className="text-center py-2 text-neutral-400 text-[11px]">
-                      환경설정에서 전화번호를 등록해주세요.
-                    </div>
                   )}
                 </div>
               </motion.div>
