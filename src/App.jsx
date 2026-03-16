@@ -247,26 +247,35 @@ export default function App() {
   }, [blogs, dataLoaded]);
 
   const [toastMsg, setToastMsg] = useState('');
+  const [toastType, setToastType] = useState('success');
   const [isToastVisible, setIsToastVisible] = useState(false);
+  const toastTimerRef = useRef(null);
+  const [isDeploying, setIsDeploying] = useState(false);
 
-  const showToast = useCallback((msg) => {
+  const showToast = useCallback((msg, type = 'success', duration = 3000) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToastMsg(msg);
+    setToastType(type);
     setIsToastVisible(true);
-    setTimeout(() => setIsToastVisible(false), 3000);
+    if (duration > 0) {
+      toastTimerRef.current = setTimeout(() => setIsToastVisible(false), duration);
+    }
   }, []);
 
   const handleDeploy = async () => {
-    showToast('변경사항 배포 중...');
+    if (isDeploying) return;
+    setIsDeploying(true);
+    showToast('변경사항 배포 중... 잠시만 기다려주세요.', 'loading', 0);
     try {
-      await Promise.all([
-        saveAllPageConfigs(pageConfigs),
-        saveSettings(settings),
-        saveAllBlogs(blogs),
-      ]);
-      showToast('변경사항이 성공적으로 배포되었습니다!');
+      await saveAllPageConfigs(pageConfigs);
+      await saveSettings(settings);
+      await saveAllBlogs(blogs);
+      showToast('변경사항이 성공적으로 배포되었습니다!', 'success', 4000);
     } catch (err) {
       console.error('배포 실패:', err);
-      showToast('배포 실패: ' + err.message);
+      showToast('배포 실패: ' + err.message, 'error', 6000);
+    } finally {
+      setIsDeploying(false);
     }
   };
 
@@ -465,7 +474,7 @@ export default function App() {
       </Suspense>
 
       {/* [오버레이] 토스트 알림 컴포넌트 */}
-      <Toast message={toastMsg} isVisible={isToastVisible} />
+      <Toast message={toastMsg} isVisible={isToastVisible} type={toastType} />
     </div>
   );
 }
