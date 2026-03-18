@@ -780,7 +780,7 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
           <div className="space-y-6">
             {config.framePrice.tables.map((table) => {
               // 현재 선택된 상품의 기본 제공 사이즈 추출 (예: '16R(약 40x50cm)' → '16R')
-              const productFrameSize = selectedProduct?.frame?.match(/^(\d+R)/)?.[1] || '';
+              const productFrameSize = selectedProduct?.frame?.match(/(\d+R)/)?.[1] || '';
 
               return (
                 <div key={table.id}>
@@ -796,7 +796,8 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
                       </thead>
                       <tbody>
                         {table.rows.map((row, idx) => {
-                          const isDefault = productFrameSize && row.size === productFrameSize;
+                          const rowSize = row.size?.match(/(\d+R)/)?.[1] || row.size;
+                          const isDefault = productFrameSize && rowSize === productFrameSize;
                           return (
                             <tr
                               key={idx}
