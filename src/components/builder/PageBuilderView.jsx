@@ -3,7 +3,7 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icons } from '../../data/links';
-import { SECTION_REGISTRY, SECTION_GROUPS, getSectionBadge, TAB_ICON_OPTIONS, createDefaultConfig, MULTI_INSTANCE_TYPES } from '../../data/pageConfigData';
+import { SECTION_REGISTRY, SECTION_GROUPS, SECTION_DATA_KEY, getSectionBadge, TAB_ICON_OPTIONS, createDefaultConfig, MULTI_INSTANCE_TYPES } from '../../data/pageConfigData';
 import { SplashHeaderSection } from './SplashHeaderSection';
 import { HeroSliderSection } from './HeroSliderSection';
 import { GuideCardSection } from './GuideCardSection';
@@ -433,8 +433,18 @@ export function PageBuilderView({ pageConfigs, setPageConfigs, blogs, setBlogs, 
       enabled: true,
     };
     updateSections([...sections, newSection]);
+
+    // 섹션의 데이터 키가 config에 없으면 기본값 채우기
+    const dataKey = SECTION_DATA_KEY[type];
+    if (dataKey && !config[dataKey]) {
+      const defaults = createDefaultConfig('', effectiveTab);
+      if (defaults[dataKey]) {
+        updateConfig(dataKey, defaults[dataKey]);
+      }
+    }
+
     showToast(`"${SECTION_REGISTRY[type].label}" 블록이 추가되었습니다.`);
-  }, [effectiveTab, sections, updateSections, showToast]);
+  }, [effectiveTab, sections, updateSections, showToast, config, updateConfig]);
 
   // ─── 섹션 삭제 ─────────────────────────────────────────
   const handleDeleteSection = useCallback((sectionId) => {
