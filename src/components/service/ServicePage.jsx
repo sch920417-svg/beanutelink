@@ -251,6 +251,9 @@ export default function ServicePage() {
                     activeSegment={activeSegment}
                     onSegmentChange={(segment) => {
                       trackEvent(EVENT_TYPES.SEGMENT_CHANGE, { segment });
+                      if (segment === 'blog') {
+                        trackEvent(EVENT_TYPES.BLOG_VIEW, { productTitle: effectiveTab });
+                      }
                       setActiveSegment(segment);
                       setActiveNav(segment === 'blog' ? 'blog' : 'product');
                     }}
