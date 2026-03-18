@@ -765,6 +765,65 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
           </div>
         </section>
       )}
+
+      {/* ── 8. 액자 가격표 ── */}
+      {config?.framePrice?.tables?.length > 0 && (
+        <section className="bg-neutral-50 rounded-3xl p-5">
+          <h3 className="text-[15px] font-bold text-black mb-3">{config.framePrice.title || '액자 가격표 참고'}</h3>
+
+          {config.framePrice.notice && (
+            <div className="bg-neutral-900 rounded-xl px-4 py-3 mb-5">
+              <p className="text-[12px] text-white font-medium text-center">{config.framePrice.notice}</p>
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {config.framePrice.tables.map((table) => {
+              // 현재 선택된 상품의 기본 제공 사이즈 추출 (예: '16R(약 40x50cm)' → '16R')
+              const productFrameSize = selectedProduct?.frame?.match(/^(\d+R)/)?.[1] || '';
+
+              return (
+                <div key={table.id}>
+                  <h4 className="text-[13px] font-bold text-neutral-800 mb-2.5">{table.name}</h4>
+                  <div className="overflow-hidden rounded-xl border border-neutral-200">
+                    <table className="w-full text-[12px]">
+                      <thead>
+                        <tr className="bg-neutral-100">
+                          <th className="text-left px-3.5 py-2.5 text-neutral-500 font-bold">R 규격</th>
+                          <th className="text-left px-3.5 py-2.5 text-neutral-500 font-bold">약 cm 사이즈</th>
+                          <th className="text-right px-3.5 py-2.5 text-neutral-500 font-bold">가격</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {table.rows.map((row, idx) => {
+                          const isDefault = productFrameSize && row.size === productFrameSize;
+                          return (
+                            <tr
+                              key={idx}
+                              className={`border-t border-neutral-100 ${isDefault ? 'bg-red-50/50' : ''}`}
+                            >
+                              <td className={`px-3.5 py-2.5 font-bold ${isDefault ? 'text-red-500' : 'text-neutral-800'}`}>
+                                {row.size}
+                                {isDefault && <span className="ml-1 text-[10px] font-medium">(기본 제공)</span>}
+                              </td>
+                              <td className={`px-3.5 py-2.5 ${isDefault ? 'text-red-500' : 'text-neutral-500'}`}>
+                                {row.cm}
+                              </td>
+                              <td className={`px-3.5 py-2.5 text-right font-bold ${isDefault ? 'text-red-500' : 'text-neutral-800'}`}>
+                                {row.price?.toLocaleString()}원
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </motion.div>
   );
 }

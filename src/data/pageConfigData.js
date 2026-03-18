@@ -15,6 +15,7 @@ export const SECTION_REGISTRY = {
   priceTable: { label: '가격표',          icon: '💰', group: 'segment-quote' },
   review:     { label: '리뷰',           icon: '⭐', group: 'segment-quote' },
   faq:        { label: 'FAQ',            icon: '❓', group: 'segment-quote' },
+  framePrice: { label: '액자 가격표',    icon: '🖼️', group: 'segment-quote' },
   blog:       { label: '블로그 콘텐츠 연결', icon: '📝', group: 'segment-blog' },
   richText:   { label: '블로그 에디터',     icon: '✏️', group: 'content' },
 };
@@ -45,6 +46,7 @@ export const SECTION_DATA_KEY = {
   review: 'reviews',
   faq: 'faq',
   blog: 'blogMapping',
+  framePrice: 'framePrice',
   richText: 'richTextData',
 };
 
@@ -115,6 +117,38 @@ export const createDefaultConfig = (tabLabel, tabId, order = 0, icon = '📦') =
   },
   priceTable: { title: '촬영 상품 가격표', enabled: true, image: '' },
   faq: { title: '자주 묻는 질문', items: [] },
+  framePrice: {
+    title: '액자 가격표 참고',
+    notice: '모든 촬영상품엔 아크릴 우드 프레임이 포함되어있습니다.',
+    tables: [
+      {
+        id: 'wood',
+        name: '아크릴 우드 프레임 액자',
+        rows: [
+          { size: '5R', cm: '약 13x18 cm', price: 20000 },
+          { size: '8R', cm: '약 20x30 cm', price: 40000 },
+          { size: '12R', cm: '약 30x43 cm', price: 80000 },
+          { size: '16R', cm: '약 40x50 cm', price: 100000 },
+          { size: '20R', cm: '약 50x61 cm', price: 150000 },
+          { size: '24R', cm: '약 61x86 cm', price: 180000 },
+          { size: '30R', cm: '약 76x102 cm', price: 250000 },
+        ],
+      },
+      {
+        id: 'acrylic',
+        name: '아크릴 프레임 리스 액자',
+        rows: [
+          { size: '5R', cm: '약 13x18 cm', price: 30000 },
+          { size: '8R', cm: '약 20x30 cm', price: 50000 },
+          { size: '12R', cm: '약 30x43 cm', price: 100000 },
+          { size: '16R', cm: '약 40x50 cm', price: 130000 },
+          { size: '20R', cm: '약 50x61 cm', price: 180000 },
+          { size: '24R', cm: '약 61x86 cm', price: 230000 },
+          { size: '30R', cm: '약 76x102 cm', price: 300000 },
+        ],
+      },
+    ],
+  },
   blogMapping: { categoryFilter: tabLabel, selectedBlogIds: [] },
   reviews: { title: '리뷰', items: [] },
   video: { title: '영상', items: [] },

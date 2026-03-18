@@ -3,7 +3,7 @@ import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icons } from '../../data/links';
-import { SECTION_REGISTRY, SECTION_GROUPS, getSectionBadge, TAB_ICON_OPTIONS, createDefaultConfig } from '../../data/pageConfigData';
+import { SECTION_REGISTRY, SECTION_GROUPS, getSectionBadge, TAB_ICON_OPTIONS, createDefaultConfig, MULTI_INSTANCE_TYPES } from '../../data/pageConfigData';
 import { SplashHeaderSection } from './SplashHeaderSection';
 import { HeroSliderSection } from './HeroSliderSection';
 import { GuideCardSection } from './GuideCardSection';
@@ -15,6 +15,8 @@ import { ReviewSection } from './ReviewSection';
 import { VideoSection } from './VideoSection';
 import { GallerySection } from './GallerySection';
 import { SlideReviewSection } from './SlideReviewSection';
+import { RichTextSection } from './RichTextSection';
+import { FramePriceSection } from './FramePriceSection';
 import { BuilderPreview } from './BuilderPreview';
 
 const Icon = ({ name, size = 24, className = "" }) => {
@@ -31,10 +33,12 @@ const SECTION_COMPONENT_MAP = {
   priceTable: PriceTableSection,
   review: ReviewSection,
   faq: FAQSection,
+  framePrice: FramePriceSection,
   blog: BlogMappingSection,
   video: VideoSection,
   gallery: GallerySection,
   slideReview: SlideReviewSection,
+  richText: RichTextSection,
 };
 
 // 섹션 타입별 추가 props (guide, blog는 blogs/setBlogs/activeTab 필요)
@@ -227,7 +231,7 @@ function TabEditModal({ tab, onSave, onDelete, onClose, canDelete }) {
 function SectionAddButton({ groupId, existingTypes, onAdd }) {
   const [isOpen, setIsOpen] = useState(false);
   const availableTypes = Object.entries(SECTION_REGISTRY)
-    .filter(([type, meta]) => meta.group === groupId && !existingTypes.includes(type));
+    .filter(([type, meta]) => meta.group === groupId && (MULTI_INSTANCE_TYPES.includes(type) || !existingTypes.includes(type)));
 
   if (availableTypes.length === 0) return null;
 
@@ -437,17 +441,26 @@ export function PageBuilderView({ pageConfigs, setPageConfigs, blogs, setBlogs, 
     const section = sections.find(s => s.id === sectionId);
     const label = section ? SECTION_REGISTRY[section.type]?.label : '';
     updateSections(sections.filter(s => s.id !== sectionId));
+    // richText 섹션 삭제 시 해당 데이터도 정리
+    if (section?.type === 'richText' && config?.richTextData?.[sectionId]) {
+      const { [sectionId]: _, ...rest } = config.richTextData;
+      updateConfig('richTextData', rest);
+    }
     showToast(`"${label}" 블록이 삭제되었습니다.`);
-  }, [sections, updateSections, showToast]);
+  }, [sections, updateSections, showToast, config, updateConfig]);
 
   // ─── 섹션 그룹 순서 ────────────────────────────────────
   const groupOrder = config?.sectionGroupOrder || SECTION_GROUPS.map(g => g.id);
-  const orderedGroups = useMemo(() =>
-    groupOrder
+  const orderedGroups = useMemo(() => {
+    const ordered = groupOrder
       .map(id => SECTION_GROUPS.find(g => g.id === id))
-      .filter(Boolean),
-    [groupOrder]
-  );
+      .filter(Boolean);
+    // sectionGroupOrder에 누락된 신규 그룹 자동 추가
+    SECTION_GROUPS.forEach(g => {
+      if (!groupOrder.includes(g.id)) ordered.push(g);
+    });
+    return ordered;
+  }, [groupOrder]);
 
   const handleMoveGroup = useCallback((groupId, direction) => {
     const currentOrder = config?.sectionGroupOrder || SECTION_GROUPS.map(g => g.id);
@@ -580,7 +593,7 @@ export function PageBuilderView({ pageConfigs, setPageConfigs, blogs, setBlogs, 
                                 onDelete={() => handleDeleteSection(section.id)}
                                 dragHandleProps={dragHandleProps}
                               >
-                                <SectionComp config={config} updateConfig={updateConfig} showToast={showToast} {...extraProps} />
+                                <SectionComp config={config} updateConfig={updateConfig} showToast={showToast} sectionId={section.id} {...extraProps} />
                               </AccordionItem>
                             )}
                           </SortableItem>
