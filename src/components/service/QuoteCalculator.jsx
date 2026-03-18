@@ -169,7 +169,7 @@ function ReviewLightbox({ images, currentIndex, onClose, onNavigate }) {
 }
 
 // ─── 리뷰 슬라이더 (absolute 포지셔닝, 3:4 비율) ─────────────
-function ReviewSection({ images = [] }) {
+function ReviewSection({ images = [], lockScroll = false }) {
   const [activeSlide, setActiveSlide] = useState(0);
   const [lightboxIndex, setLightboxIndex] = useState(null);
 
@@ -177,7 +177,7 @@ function ReviewSection({ images = [] }) {
 
   return (
     <>
-      <div className="relative h-[460px] w-full flex items-center justify-center touch-pan-y">
+      <div className={`relative h-[460px] w-full flex items-center justify-center ${lockScroll ? 'touch-none' : ''}`}>
         {images.map((img, i) => {
           const offset = i - activeSlide;
           if (Math.abs(offset) > 2) return null;
@@ -271,7 +271,13 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
   // config가 있으면 config 데이터 사용, 없으면 기본 데이터 폴백
   const qb = config?.quoteBuilder;
   const configProducts = qb?.products || [];
-  const quoteFields = qb?.quoteFields || { people: true, pets: true, frame: true, originalPhoto: true };
+  // quoteFields: 배열이면 그대로, 객체(레거시)면 배열로 변환
+  const DEFAULT_FIELD_ORDER = ['people', 'pets', 'retouchedPhotos', 'frame', 'originalPhoto'];
+  const rawQuoteFields = qb?.quoteFields;
+  const quoteFields = Array.isArray(rawQuoteFields)
+    ? rawQuoteFields
+    : DEFAULT_FIELD_ORDER.map(key => ({ key, enabled: rawQuoteFields?.[key] ?? (key === 'retouchedPhotos') }));
+  const isFieldEnabled = (key) => quoteFields.some(f => f.key === key && f.enabled);
   const globalExtraPersonCost = qb?.extraPersonCost || 22000;
   const petFreeCount = qb?.petFreeCount ?? 1;
   const petExtraCost = qb?.petExtraCost || 22000;
@@ -349,19 +355,19 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
     if (!selectedProduct) return 0;
 
     // 인원 선택이 필요한데 안 한 경우
-    if (quoteFields.people && peopleCount === 0) return 0;
+    if (isFieldEnabled('people') && peopleCount === 0) return 0;
     // 반려동물 선택이 필요한데 안 한 경우
-    if (quoteFields.pets && petCount === -1) return 0;
+    if (isFieldEnabled('pets') && petCount === -1) return 0;
 
     let cost = dateType === DATE_TYPES.WEEKDAY ? selectedProduct.weekdayPrice : selectedProduct.weekendPrice;
 
     // 추가 인원 비용
-    if (quoteFields.people && peopleCount > basePeople && extraPersonCost > 0) {
+    if (isFieldEnabled('people') && peopleCount > basePeople && extraPersonCost > 0) {
       cost += (peopleCount - basePeople) * extraPersonCost;
     }
 
     // 반려동물 추가 비용
-    if (quoteFields.pets && petCount > petFreeCount && petExtraCost > 0) {
+    if (isFieldEnabled('pets') && petCount > petFreeCount && petExtraCost > 0) {
       cost += (petCount - petFreeCount) * petExtraCost;
     }
 
@@ -370,15 +376,15 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
 
   const formatCurrency = (amount) => new Intl.NumberFormat('ko-KR').format(amount);
 
-  const extraPeopleCount = quoteFields.people && selectedProduct && peopleCount > basePeople
+  const extraPeopleCount = isFieldEnabled('people') && selectedProduct && peopleCount > basePeople
     ? peopleCount - basePeople
     : 0;
 
   // 모든 필수 선택이 완료되었는지
   const allSelected = useMemo(() => {
-    if (!quoteFields.people && !quoteFields.pets) return true;
-    if (quoteFields.people && peopleCount === 0) return false;
-    if (quoteFields.pets && petCount === -1) return false;
+    if (!isFieldEnabled('people') && !isFieldEnabled('pets')) return true;
+    if (isFieldEnabled('people') && peopleCount === 0) return false;
+    if (isFieldEnabled('pets') && petCount === -1) return false;
     return true;
   }, [quoteFields, peopleCount, petCount]);
 
@@ -457,17 +463,17 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
       </section>
 
       {/* ── 3. 총 인원 & 반려동물 (조건부 표시) ── */}
-      {(quoteFields.people || quoteFields.pets) && (
+      {(isFieldEnabled('people') || isFieldEnabled('pets')) && (
         <section className="bg-neutral-50 rounded-3xl p-5">
           <h3 className="text-[15px] font-bold text-black mb-4">
-            {quoteFields.people && quoteFields.pets
+            {isFieldEnabled('people') && isFieldEnabled('pets')
               ? '총 인원 & 반려동물'
-              : quoteFields.people
+              : isFieldEnabled('people')
                 ? '총 인원'
                 : '반려동물'}
           </h3>
-          <div className={`grid gap-3 ${quoteFields.people && quoteFields.pets ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            {quoteFields.people && (
+          <div className={`grid gap-3 ${isFieldEnabled('people') && isFieldEnabled('pets') ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {isFieldEnabled('people') && (
               <SelectField
                 value={peopleCount}
                 onChange={(val) => { setPeopleCount(val); trackEvent(EVENT_TYPES.QUOTE_INTERACT, { field: 'people', value: val }); }}
@@ -476,7 +482,7 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
                 highlight={peopleCount === 0}
               />
             )}
-            {quoteFields.pets && (
+            {isFieldEnabled('pets') && (
               <SelectField
                 value={petCount}
                 onChange={(val) => { setPetCount(val); trackEvent(EVENT_TYPES.QUOTE_INTERACT, { field: 'pet', value: val }); }}
@@ -512,59 +518,66 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
               </span>
             </div>
 
-            {quoteFields.people && (
-              <div className="flex justify-between items-center text-neutral-300">
-                <span>인원</span>
-                <span className="font-semibold text-white">
-                  {peopleCount === 0 ? (
-                    <span className="text-amber-400 animate-pulse text-[12px]">선택 대기중</span>
-                  ) : (
-                    `${peopleCount}명`
-                  )}
-                </span>
-              </div>
-            )}
-
-            {quoteFields.pets && (
-              <div className="flex justify-between items-center text-neutral-300">
-                <span>반려동물</span>
-                <span className="font-semibold text-white">
-                  {petCount === -1 ? (
-                    <span className="text-amber-400 animate-pulse text-[12px]">선택 대기중</span>
-                  ) : petCount === 0 ? (
-                    '없음'
-                  ) : (
-                    `${petCount}마리`
-                  )}
-                </span>
-              </div>
-            )}
-
-            {/* 추가 정보 */}
-            {totalCost > 0 && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="pt-2 space-y-3"
-              >
-                {quoteFields.frame && selectedProduct?.frame && (
-                  <div className="flex justify-between items-center text-neutral-300">
-                    <span>액자</span>
-                    <span className="font-semibold text-white text-right text-[12px]">
-                      {selectedProduct.frame}
-                    </span>
-                  </div>
-                )}
-                {quoteFields.originalPhoto && selectedProduct?.originalIncluded && (
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-amber-400 underline underline-offset-2 decoration-amber-400/50">
-                      고화질 원본
-                    </span>
-                    <span className="font-bold text-amber-400">무료</span>
-                  </div>
-                )}
-              </motion.div>
-            )}
+            {/* 동적 순서 항목 렌더링 */}
+            {quoteFields.filter(f => f.enabled).map(field => {
+              switch (field.key) {
+                case 'people':
+                  return (
+                    <div key="people" className="flex justify-between items-center text-neutral-300">
+                      <span>인원</span>
+                      <span className="font-semibold text-white">
+                        {peopleCount === 0 ? (
+                          <span className="text-amber-400 animate-pulse text-[12px]">선택 대기중</span>
+                        ) : (
+                          `${peopleCount}명`
+                        )}
+                      </span>
+                    </div>
+                  );
+                case 'pets':
+                  return (
+                    <div key="pets" className="flex justify-between items-center text-neutral-300">
+                      <span>반려동물</span>
+                      <span className="font-semibold text-white">
+                        {petCount === -1 ? (
+                          <span className="text-amber-400 animate-pulse text-[12px]">선택 대기중</span>
+                        ) : petCount === 0 ? (
+                          '없음'
+                        ) : (
+                          `${petCount}마리`
+                        )}
+                      </span>
+                    </div>
+                  );
+                case 'retouchedPhotos':
+                  return selectedProduct?.retouchedPhotos ? (
+                    <div key="retouchedPhotos" className="flex justify-between items-center text-neutral-300">
+                      <span>보정본</span>
+                      <span className="font-semibold text-white">{selectedProduct.retouchedPhotos}장</span>
+                    </div>
+                  ) : null;
+                case 'frame':
+                  return selectedProduct?.frame && totalCost > 0 ? (
+                    <div key="frame" className="flex justify-between items-center text-neutral-300">
+                      <span>액자</span>
+                      <span className="font-semibold text-white text-right text-[12px]">
+                        {selectedProduct.frame}
+                      </span>
+                    </div>
+                  ) : null;
+                case 'originalPhoto':
+                  return selectedProduct?.originalIncluded && totalCost > 0 ? (
+                    <div key="originalPhoto" className="flex justify-between items-center">
+                      <span className="font-semibold text-amber-400 underline underline-offset-2 decoration-amber-400/50">
+                        고화질 원본
+                      </span>
+                      <span className="font-bold text-amber-400">무료</span>
+                    </div>
+                  ) : null;
+                default:
+                  return null;
+              }
+            })}
           </div>
 
           {/* 추가 비용 내역 */}
@@ -574,9 +587,9 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
               animate={{ opacity: 1 }}
               className="mb-5 space-y-2.5"
             >
-              {extraPeopleCount > 0 || (quoteFields.pets && petCount > petFreeCount) ? (
+              {extraPeopleCount > 0 || (isFieldEnabled('pets') && petCount > petFreeCount) ? (
                 <>
-                  {quoteFields.pets && petCount > petFreeCount && (
+                  {isFieldEnabled('pets') && petCount > petFreeCount && (
                     <div className="bg-white/5 rounded-xl p-3.5 flex justify-between items-center text-[13px] border border-white/5">
                       <span className="text-amber-400 font-medium">
                         반려동물 추가 ({petCount - petFreeCount}마리)
@@ -719,7 +732,7 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
       <section className="bg-neutral-50 rounded-3xl py-5 overflow-hidden">
         <h3 className="text-[15px] font-bold text-black mb-4 px-5">고객 리뷰</h3>
         {reviewImages.length > 0 ? (
-          <ReviewSection images={reviewImages} />
+          <ReviewSection images={reviewImages} lockScroll={config?.reviews?.lockScroll ?? false} />
         ) : (
           <ReviewSection
             images={[

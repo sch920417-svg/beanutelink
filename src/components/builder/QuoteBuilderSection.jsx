@@ -48,25 +48,46 @@ export function QuoteBuilderSection({ config, updateConfig, showToast }) {
     update({ ...qb, additionalOptions: qb.additionalOptions.filter(o => o.id !== id) });
   };
 
-  // ─── Quote Fields Visibility ───
-  const quoteFields = qb.quoteFields || { people: true, pets: true, frame: true, originalPhoto: true };
-
-  const toggleField = (field) => {
-    update({
-      ...qb,
-      quoteFields: {
-        ...quoteFields,
-        [field]: !quoteFields[field],
-      },
-    });
+  // ─── Quote Fields Visibility + Order ───
+  const FIELD_META = {
+    people: { label: '인원 선택', icon: '👥', description: '총 인원 드롭다운 표시' },
+    pets: { label: '반려동물', icon: '🐾', description: '반려동물 수 선택 표시' },
+    retouchedPhotos: { label: '보정본', icon: '📷', description: '견적서에 보정본 장수 표시' },
+    frame: { label: '액자 정보', icon: '🖼️', description: '견적서에 액자 정보 표시' },
+    originalPhoto: { label: '고화질 원본', icon: '📸', description: '견적서에 원본 제공 표시' },
   };
 
-  const FIELD_OPTIONS = [
-    { key: 'people', label: '인원 선택', icon: '👥', description: '총 인원 드롭다운 표시' },
-    { key: 'pets', label: '반려동물', icon: '🐾', description: '반려동물 수 선택 표시' },
-    { key: 'frame', label: '액자 정보', icon: '🖼️', description: '견적서에 액자 정보 표시' },
-    { key: 'originalPhoto', label: '고화질 원본', icon: '📸', description: '견적서에 원본 제공 표시' },
+  const DEFAULT_FIELDS = [
+    { key: 'people', enabled: true },
+    { key: 'pets', enabled: true },
+    { key: 'retouchedPhotos', enabled: true },
+    { key: 'frame', enabled: true },
+    { key: 'originalPhoto', enabled: true },
   ];
+
+  // 기존 객체 형태 → 배열로 마이그레이션
+  const quoteFields = Array.isArray(qb.quoteFields)
+    ? qb.quoteFields
+    : DEFAULT_FIELDS.map(f => ({
+        key: f.key,
+        enabled: qb.quoteFields?.[f.key] ?? f.enabled,
+      }));
+
+  const updateFields = (newFields) => {
+    update({ ...qb, quoteFields: newFields });
+  };
+
+  const toggleField = (key) => {
+    updateFields(quoteFields.map(f => f.key === key ? { ...f, enabled: !f.enabled } : f));
+  };
+
+  const moveField = (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= quoteFields.length) return;
+    const arr = [...quoteFields];
+    [arr[index], arr[newIndex]] = [arr[newIndex], arr[index]];
+    updateFields(arr);
+  };
 
   return (
     <div className="space-y-6">
@@ -77,40 +98,77 @@ export function QuoteBuilderSection({ config, updateConfig, showToast }) {
             <span className="text-base">🎛️</span> 견적서 항목 표시 설정
           </h4>
         </div>
-        <p className="text-[11px] text-neutral-500 mb-3">고객 견적서에서 표시할 항목을 ON/OFF 할 수 있습니다.</p>
+        <p className="text-[11px] text-neutral-500 mb-3">고객 견적서에서 표시할 항목을 ON/OFF하고, 화살표로 순서를 변경할 수 있습니다.</p>
 
-        <div className="grid grid-cols-2 gap-2">
-          {FIELD_OPTIONS.map(({ key, label, icon, description }) => (
-            <button
-              key={key}
-              onClick={() => toggleField(key)}
-              className={`flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
-                quoteFields[key]
-                  ? 'bg-lime-400/10 border-lime-500/30 hover:bg-lime-400/20'
-                  : 'bg-neutral-900 border-neutral-800 hover:bg-neutral-800/50'
-              }`}
-            >
-              <span className="text-lg">{icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold ${quoteFields[key] ? 'text-lime-400' : 'text-neutral-500'}`}>
-                    {label}
-                  </span>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                    quoteFields[key] ? 'bg-lime-400/20 text-lime-400' : 'bg-neutral-800 text-neutral-600'
-                  }`}>
-                    {quoteFields[key] ? 'ON' : 'OFF'}
-                  </span>
+        <div className="space-y-1.5">
+          {quoteFields.map((field, idx) => {
+            const meta = FIELD_META[field.key];
+            if (!meta) return null;
+            return (
+              <div
+                key={field.key}
+                className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all ${
+                  field.enabled
+                    ? 'bg-lime-400/10 border-lime-500/30'
+                    : 'bg-neutral-900 border-neutral-800'
+                }`}
+              >
+                {/* 순서 번호 */}
+                <span className="text-[10px] font-bold text-neutral-600 w-4 text-center">{idx + 1}</span>
+
+                {/* 위/아래 화살표 */}
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => moveField(idx, -1)}
+                    disabled={idx === 0}
+                    className="text-neutral-500 hover:text-white disabled:opacity-20 transition-colors"
+                  >
+                    <Icon name="ChevronUp" size={14} />
+                  </button>
+                  <button
+                    onClick={() => moveField(idx, 1)}
+                    disabled={idx === quoteFields.length - 1}
+                    className="text-neutral-500 hover:text-white disabled:opacity-20 transition-colors"
+                  >
+                    <Icon name="ChevronDown" size={14} />
+                  </button>
                 </div>
-                <p className="text-[10px] text-neutral-600 mt-0.5 truncate">{description}</p>
+
+                {/* 아이콘 + 라벨 */}
+                <span className="text-lg">{meta.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold ${field.enabled ? 'text-lime-400' : 'text-neutral-500'}`}>
+                      {meta.label}
+                    </span>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                      field.enabled ? 'bg-lime-400/20 text-lime-400' : 'bg-neutral-800 text-neutral-600'
+                    }`}>
+                      {field.enabled ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-neutral-600 mt-0.5 truncate">{meta.description}</p>
+                </div>
+
+                {/* ON/OFF 토글 */}
+                <button
+                  onClick={() => toggleField(field.key)}
+                  className={`w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${
+                    field.enabled ? 'bg-lime-500' : 'bg-neutral-700'
+                  }`}
+                >
+                  <div className={`w-4 h-4 bg-white rounded-full transition-transform ${
+                    field.enabled ? 'translate-x-5' : 'translate-x-0'
+                  }`} />
+                </button>
               </div>
-            </button>
-          ))}
+            );
+          })}
         </div>
       </div>
 
       {/* ─── SURCHARGE SETTINGS ─── */}
-      {(quoteFields.people || quoteFields.pets) && (
+      {(quoteFields.some(f => f.key === 'people' && f.enabled) || quoteFields.some(f => f.key === 'pets' && f.enabled)) && (
         <div>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
@@ -118,7 +176,7 @@ export function QuoteBuilderSection({ config, updateConfig, showToast }) {
             </h4>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            {quoteFields.people && (
+            {quoteFields.some(f => f.key === 'people' && f.enabled) && (
               <div>
                 <label className="text-[11px] font-bold text-neutral-500 mb-1 block">인원 추가 (1인당)</label>
                 <input type="number" value={qb.extraPersonCost || 0}
@@ -126,7 +184,7 @@ export function QuoteBuilderSection({ config, updateConfig, showToast }) {
                   className="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-lime-500/50" />
               </div>
             )}
-            {quoteFields.pets && (
+            {quoteFields.some(f => f.key === 'pets' && f.enabled) && (
               <>
                 <div>
                   <label className="text-[11px] font-bold text-neutral-500 mb-1 block">반려동물 무료 (마리)</label>

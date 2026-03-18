@@ -16,13 +16,18 @@ export const SECTION_REGISTRY = {
   review:     { label: '리뷰',           icon: '⭐', group: 'segment-quote' },
   faq:        { label: 'FAQ',            icon: '❓', group: 'segment-quote' },
   blog:       { label: '블로그 콘텐츠 연결', icon: '📝', group: 'segment-blog' },
+  richText:   { label: '블로그 에디터',     icon: '✏️', group: 'content' },
 };
+
+// 한 페이지에 여러 개 추가 가능한 섹션 타입
+export const MULTI_INSTANCE_TYPES = ['richText'];
 
 // 섹션 그룹 정의
 export const SECTION_GROUPS = [
   { id: 'header',        label: '헤더' },
   { id: 'media',         label: '사진/영상 섹션' },
   { id: 'guide',         label: '촬영 가이드 섹션' },
+  { id: 'content',       label: '자유 콘텐츠' },
   { id: 'segment-quote', label: '세그먼트 · 견적 계산하기' },
   { id: 'segment-blog',  label: '세그먼트 · 블로그 보기' },
 ];
@@ -40,6 +45,7 @@ export const SECTION_DATA_KEY = {
   review: 'reviews',
   faq: 'faq',
   blog: 'blogMapping',
+  richText: 'richTextData',
 };
 
 // 배지 생성 함수 (섹션 타입별)
@@ -53,6 +59,7 @@ export const getSectionBadge = (type, config) => {
     case 'video': return `${(config.video?.items || []).length}개`;
     case 'gallery': return `${(config.gallery?.images || []).length}장`;
     case 'slideReview': return `${(config.slideReview?.slides || []).length}개`;
+    case 'richText': return null;
     default: return null;
   }
 };
@@ -95,7 +102,13 @@ export const createDefaultConfig = (tabLabel, tabId, order = 0, icon = '📦') =
     extraPersonCost: 22000,
     petFreeCount: 1,
     petExtraCost: 22000,
-    quoteFields: { people: true, pets: true, frame: true, originalPhoto: true },
+    quoteFields: [
+      { key: 'people', enabled: true },
+      { key: 'pets', enabled: true },
+      { key: 'retouchedPhotos', enabled: true },
+      { key: 'frame', enabled: true },
+      { key: 'originalPhoto', enabled: true },
+    ],
     ctaText: '카카오톡 채팅 상담하기 →',
     ctaUrl: '',
     disclaimer: '해당 견적 이외에 추가비용은 절대 발생하지 않습니다.',
@@ -107,6 +120,7 @@ export const createDefaultConfig = (tabLabel, tabId, order = 0, icon = '📦') =
   video: { title: '영상', items: [] },
   gallery: { title: '갤러리', images: [] },
   slideReview: { title: '내가 이 스튜디오를 예약한 이유', subtitle: '실제 고객님의 생생한 리뷰', bgColor: '#000000', textColor: '#ffffff', slides: [] },
+  richTextData: {},
 });
 
 export const initialPageConfigs = {
@@ -130,7 +144,13 @@ export const initialPageConfigs = {
       extraPersonCost: 22000,
       petFreeCount: 1,
       petExtraCost: 22000,
-      quoteFields: { people: true, pets: true, frame: true, originalPhoto: true },
+      quoteFields: [
+        { key: 'people', enabled: true },
+        { key: 'pets', enabled: true },
+        { key: 'retouchedPhotos', enabled: true },
+        { key: 'frame', enabled: true },
+        { key: 'originalPhoto', enabled: true },
+      ],
       additionalOptions: [
         { id: 'ao1', label: '인원 추가', price: '22,000원(1인)' },
         { id: 'ao2', label: '반려동물', price: '1마리까지 무료' },
@@ -183,7 +203,11 @@ export const initialPageConfigs = {
       extraPersonCost: 0,
       petFreeCount: 0,
       petExtraCost: 0,
-      quoteFields: { people: true, pets: false, frame: false, originalPhoto: true },
+      quoteFields: [
+        { key: 'people', enabled: true },
+        { key: 'retouchedPhotos', enabled: true },
+        { key: 'originalPhoto', enabled: true },
+      ],
       additionalOptions: [],
       ctaText: '카카오톡 채팅 상담하기 →',
       ctaUrl: '',
@@ -209,7 +233,11 @@ export const initialPageConfigs = {
       extraPersonCost: 0,
       petFreeCount: 0,
       petExtraCost: 0,
-      quoteFields: { people: true, pets: false, frame: false, originalPhoto: true },
+      quoteFields: [
+        { key: 'people', enabled: true },
+        { key: 'retouchedPhotos', enabled: true },
+        { key: 'originalPhoto', enabled: true },
+      ],
       additionalOptions: [],
       ctaText: '카카오톡 채팅 상담하기 →',
       ctaUrl: '',
@@ -235,7 +263,10 @@ export const initialPageConfigs = {
       extraPersonCost: 0,
       petFreeCount: 0,
       petExtraCost: 0,
-      quoteFields: { people: false, pets: false, frame: false, originalPhoto: true },
+      quoteFields: [
+        { key: 'retouchedPhotos', enabled: true },
+        { key: 'originalPhoto', enabled: true },
+      ],
       additionalOptions: [],
       ctaText: '카카오톡 채팅 상담하기 →',
       ctaUrl: '',
