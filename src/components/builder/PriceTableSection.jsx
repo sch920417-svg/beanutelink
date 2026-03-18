@@ -1,16 +1,18 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
+import { uploadCompressed } from '../../services/storage';
 
 export function PriceTableSection({ config, updateConfig, showToast }) {
   const products = config.quoteBuilder.products;
   const additionalOptions = config.quoteBuilder.additionalOptions;
   const priceTable = config.priceTable || {};
   const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
 
   const updatePriceTable = (fields) => {
     updateConfig('priceTable', { ...priceTable, ...fields });
   };
 
-  const handleFileUpload = (e) => {
+  const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -19,12 +21,17 @@ export function PriceTableSection({ config, updateConfig, showToast }) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      updatePriceTable({ image: evt.target.result });
+    setUploading(true);
+    try {
+      const url = await uploadCompressed(file, 'priceTable');
+      updatePriceTable({ image: url });
       showToast('가격표 이미지가 업로드되었습니다.');
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('가격표 이미지 업로드 실패:', err);
+      showToast('이미지 업로드에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const removeImage = () => {
@@ -38,7 +45,7 @@ export function PriceTableSection({ config, updateConfig, showToast }) {
     <div>
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-sm font-bold text-white flex items-center gap-2">
-          <span className="text-base">🖼️</span> 가격표 이미지 (1:1)
+          <span className="text-base">🖼️</span> 가격표 이미지
         </h4>
       </div>
       <p className="text-[11px] text-neutral-500 mb-2">가격표를 직접 디자인한 이미지를 업로드하면 고객 페이지에 표시됩니다.</p>
@@ -51,10 +58,15 @@ export function PriceTableSection({ config, updateConfig, showToast }) {
         className="hidden"
       />
 
-      {priceTable.image ? (
+      {uploading ? (
+        <div className="w-full py-6 border-2 border-dashed border-neutral-700 rounded-xl flex flex-col items-center justify-center gap-2">
+          <div className="w-6 h-6 border-2 border-neutral-500 border-t-lime-400 rounded-full animate-spin" />
+          <span className="text-xs text-neutral-400">업로드 중...</span>
+        </div>
+      ) : priceTable.image ? (
         <div className="space-y-2">
-          <div className="rounded-xl overflow-hidden border border-neutral-800 aspect-square w-full max-w-[200px]">
-            <img src={priceTable.image} alt="가격표 미리보기" className="w-full h-full object-cover" />
+          <div className="rounded-xl overflow-hidden border border-neutral-800 w-full max-w-[200px]">
+            <img src={priceTable.image} alt="가격표 미리보기" className="w-full h-auto" />
           </div>
           <div className="flex gap-2">
             <button
