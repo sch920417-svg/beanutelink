@@ -1,6 +1,6 @@
 // ─── 스튜디오 링크 분석 유틸리티 ───
-// localStorage 기반 이벤트 추적 & 집계
-// Firebase 연결 시 storage backend만 교체하면 됨
+// localStorage + Firestore 동기화 이벤트 추적 & 집계
+import { saveAnalyticsEvent } from '../services/firestore';
 
 const STORAGE_KEY = 'sl_analytics';
 const SESSION_KEY = 'sl_session';
@@ -134,6 +134,8 @@ export function trackEvent(type, data = {}) {
   const events = readEvents();
   events.push(event);
   writeEvents(events);
+  // Firestore에 비동기 동기화 (실패해도 무시 — localStorage가 폴백)
+  saveAnalyticsEvent(event).catch(() => {});
   return event;
 }
 
@@ -172,6 +174,11 @@ export function exportEvents() {
 }
 
 // ─── 날짜 유틸 ───
+export function getDateRange(period, customRange = null) {
+  if (customRange) return customRange;
+  return { dateFrom: getDateFrom(period), dateTo: getDateTo(period) };
+}
+
 function getDateFrom(period) {
   const now = new Date();
   switch (period) {
@@ -241,10 +248,11 @@ function getPrevPeriodRange(period) {
 }
 
 // ─── 집계 통계 ───
-export function getStats(period = 'month', customRange = null) {
+// externalEvents가 주어지면 해당 이벤트로 집계 (Firestore 데이터 사용 시)
+export function getStats(period = 'month', customRange = null, externalEvents = null) {
   const dateFrom = customRange ? customRange.dateFrom : getDateFrom(period);
   const dateTo = customRange ? customRange.dateTo : getDateTo(period);
-  const events = getEvents({ dateFrom, dateTo });
+  const events = externalEvents || getEvents({ dateFrom, dateTo });
 
   // 세션별 방문 목적 매핑
   const sessionPurposeMap = {};
@@ -257,11 +265,8 @@ export function getStats(period = 'month', customRange = null) {
     e.type === EVENT_TYPES.PAGE_VIEW || e.type === EVENT_TYPES.SERVICE_PAGE
   );
   const allQuoteCompletes = events.filter(e => e.type === EVENT_TYPES.QUOTE_COMPLETE);
-  // 목적 일치하는 견적 완료만 카운트 (목적 미설정 세션은 모두 카운트)
-  const quoteCompletes = allQuoteCompletes.filter(e => {
-    const purpose = sessionPurposeMap[e.sessionId];
-    return !purpose || e.data?.productTitle === purpose;
-  });
+  // 모든 견적 완료를 카운트 (방문 목적과 무관하게 집계)
+  const quoteCompletes = allQuoteCompletes;
   const ctaClicks = events.filter(e =>
     e.type === EVENT_TYPES.CTA_CLICK || e.type === EVENT_TYPES.KAKAO_CLICK
   );
@@ -457,8 +462,8 @@ export function getStats(period = 'month', customRange = null) {
     timeAgo: getTimeAgo(e.timestamp),
   }));
 
-  // 이전 기간 대비
-  const prev = customRange ? null : getPrevPeriodRange(period);
+  // 이전 기간 대비 (externalEvents 사용 시 스킵 — Firestore에서 별도 처리 필요)
+  const prev = (customRange || externalEvents) ? null : getPrevPeriodRange(period);
   let summary;
   if (prev) {
     const prevEvents = getEvents({ dateFrom: prev.dateFrom, dateTo: prev.dateTo });

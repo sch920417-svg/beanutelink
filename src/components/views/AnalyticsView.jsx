@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Icons } from '../../data/links';
-import { getStats, clearEvents } from '../../utils/analytics';
+import { getStats, clearEvents, getDateRange } from '../../utils/analytics';
+import { loadAnalyticsEvents } from '../../services/firestore';
 
 const Icon = ({ name, size = 24, className = "" }) => {
     const Comp = Icons[name] || Icons.HelpCircle;
@@ -35,9 +36,24 @@ export function AnalyticsView() {
         ? { dateFrom: customFrom, dateTo: customTo }
         : null;
 
+    // Firestore에서 분석 이벤트 로드
+    const [firestoreEvents, setFirestoreEvents] = useState(null);
+    const [loadingFirestore, setLoadingFirestore] = useState(true);
+
+    useEffect(() => {
+        setLoadingFirestore(true);
+        const { dateFrom, dateTo } = getDateRange(period, customRange);
+        loadAnalyticsEvents(dateFrom, dateTo)
+            .then((events) => {
+                setFirestoreEvents(events.length > 0 ? events : null);
+            })
+            .finally(() => setLoadingFirestore(false));
+    }, [period, refreshKey, customFrom, customTo]);
+
+    // Firestore 데이터가 있으면 사용, 없으면 localStorage 폴백
     const stats = useMemo(
-        () => getStats(period, customRange),
-        [period, refreshKey, customFrom, customTo]
+        () => getStats(period, customRange, firestoreEvents),
+        [period, refreshKey, customFrom, customTo, firestoreEvents]
     );
 
     const handleClear = () => {
