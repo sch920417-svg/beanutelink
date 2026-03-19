@@ -266,7 +266,7 @@ export function QuoteBuilderSection({ config, updateConfig, showToast }) {
                     </div>
                   </div>
                   {/* 인원 설정 */}
-                  {quoteFields.people && (
+                  {quoteFields.some(f => f.key === 'people' && f.enabled) && (
                     <div className="bg-neutral-950 border border-neutral-800 rounded-xl p-3 space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-bold text-neutral-400">👥 인원 설정</span>
