@@ -386,8 +386,8 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
 
   // 하단 네비게이션 핸들러
   const handleNavChange = (navId) => {
-    setDetailPost(null); // 블로그 상세 뷰 닫기
     if (navId === 'home') {
+      setDetailPost(null); // 홈 이동 시에만 블로그 상세 닫기
       onTabChange('home');
       setActiveNav('home');
       setActiveSegment('quote');
@@ -395,19 +395,21 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
       if (scrollRef.current) scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    // 상품, 블로그, 채팅, 전화 → 바텀시트 열기
+    // 상품, 블로그, 채팅, 전화 → 바텀시트 열기 (BlogDetailView 위에 표시됨)
     setBottomSheet(navId);
   };
 
   // 바텀시트에서 상품 선택 시
   const handleSheetProductSelect = (tabId) => {
     if (bottomSheet === 'product') {
+      setDetailPost(null); // 블로그 상세에서 선택 시 닫기
       onTabChange(tabId);
       setActiveSegment('quote');
       setActiveNav('product');
       setBottomSheet(null);
       if (scrollRef.current) scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (bottomSheet === 'blog') {
+      setDetailPost(null); // 블로그 상세에서 선택 시 닫기
       onTabChange(tabId);
       setActiveSegment('blog');
       setActiveNav('blog');
