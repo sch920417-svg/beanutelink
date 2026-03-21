@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Icons } from '../../data/links';
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Home, ShoppingBag, BookOpen, MessageCircle, Phone, Clock, Check } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Home, ShoppingBag, BookOpen, MessageCircle, Phone, Clock, Check, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import ServiceHeader from '../service/ServiceHeader';
 import HeroSlider from '../service/HeroSlider';
 import ShootingGuide from '../service/ShootingGuide';
@@ -9,147 +9,26 @@ import SegmentedControl from '../service/SegmentedControl';
 import QuoteCalculator from '../service/QuoteCalculator';
 import BlogList from '../service/BlogList';
 import { SECTION_REGISTRY, SECTION_GROUPS } from '../../data/pageConfigData';
+import { getYouTubeEmbedUrl, renderBlock } from './blogBlockRenderer';
 
 const Icon = ({ name, size = 24, className = "" }) => {
   const Comp = Icons[name] || Icons.HelpCircle;
   return Comp ? <Comp size={size} className={className} /> : null;
 };
 
-function getYouTubeEmbedUrl(url) {
-  if (!url) return null;
-  let match = url.match(/(?:youtube\.com\/watch\?v=)([\w-]+)/);
-  if (match) return `https://www.youtube.com/embed/${match[1]}`;
-  match = url.match(/(?:youtu\.be\/)([\w-]+)/);
-  if (match) return `https://www.youtube.com/embed/${match[1]}`;
-  match = url.match(/(?:youtube\.com\/embed\/)([\w-]+)/);
-  if (match) return `https://www.youtube.com/embed/${match[1]}`;
-  match = url.match(/(?:youtube\.com\/shorts\/)([\w-]+)/);
-  if (match) return `https://www.youtube.com/embed/${match[1]}`;
-  return null;
-}
 
-// ─── 슬라이더 블록 (카드형 캐러셀 — 스와이프 + 버튼) ──────────
-function SliderBlock({ block }) {
-  const [sliderIndex, setSliderIndex] = useState(0);
-  const touchRef = useRef({ startX: 0, startY: 0, swiping: false });
-  const images = block.images || [];
-  if (images.length === 0) return null;
 
-  const goPrev = () => setSliderIndex(prev => (prev > 0 ? prev - 1 : images.length - 1));
-  const goNext = () => setSliderIndex(prev => (prev < images.length - 1 ? prev + 1 : 0));
-
-  const slidePercent = 85;
-  const gapPx = 8;
-
-  // 터치 스와이프 핸들러
-  const onTouchStart = (e) => {
-    touchRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, swiping: false };
-  };
-  const onTouchMove = (e) => {
-    const dx = e.touches[0].clientX - touchRef.current.startX;
-    const dy = e.touches[0].clientY - touchRef.current.startY;
-    // 가로 이동이 세로보다 크면 스와이프로 판정 → 세로 스크롤 방지
-    if (!touchRef.current.swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
-      touchRef.current.swiping = true;
-    }
-    if (touchRef.current.swiping) {
-      e.preventDefault();
-    }
-  };
-  const onTouchEnd = (e) => {
-    const dx = e.changedTouches[0].clientX - touchRef.current.startX;
-    if (Math.abs(dx) > 40) {
-      if (dx < 0) goNext();
-      else goPrev();
-    }
-  };
-
-  // 마우스 드래그 핸들러
-  const onMouseDown = (e) => {
-    touchRef.current = { startX: e.clientX, startY: e.clientY, swiping: true };
-  };
-  const onMouseUp = (e) => {
-    if (!touchRef.current.swiping) return;
-    const dx = e.clientX - touchRef.current.startX;
-    if (Math.abs(dx) > 40) {
-      if (dx < 0) goNext();
-      else goPrev();
-    }
-    touchRef.current.swiping = false;
-  };
+// ─── 리치텍스트 미리보기 ──────────────────────────────────────
+function RichTextPreview({ config, sectionId }) {
+  const data = config.richTextData?.[sectionId];
+  const blocks = data?.blocks || [];
+  if (blocks.length === 0) return null;
 
   return (
-    <div className="relative w-full group">
-      {/* 캐러셀 트랙 */}
-      <div
-        className="overflow-hidden"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onMouseDown={onMouseDown}
-        onMouseUp={onMouseUp}
-        onMouseLeave={() => { touchRef.current.swiping = false; }}
-      >
-        <motion.div
-          className="flex cursor-grab active:cursor-grabbing select-none"
-          style={{ gap: `${gapPx}px` }}
-          animate={{ x: `calc(-${sliderIndex * slidePercent}% - ${sliderIndex * gapPx}px)` }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        >
-          {images.map((img, i) => (
-            <div key={i} style={{ width: `${slidePercent}%`, flexShrink: 0 }} className="aspect-[4/5] rounded-2xl overflow-hidden bg-neutral-100">
-              <img src={img} className="w-full h-full object-cover select-none pointer-events-none" draggable={false} alt="" />
-            </div>
-          ))}
-        </motion.div>
+    <div className="px-5 py-4">
+      <div className="space-y-4">
+        {blocks.map((block, idx) => renderBlock(block, idx))}
       </div>
-
-      {/* 좌/우 화살표 (hover 시 표시) */}
-      {images.length > 1 && (
-        <>
-          <button onClick={goPrev} className="absolute left-1 top-1/2 -translate-y-1/2 p-1.5 bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button onClick={goNext} className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 bg-black/40 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <ChevronRight className="w-4 h-4" />
-          </button>
-          <div className="flex justify-center gap-1.5 mt-3">
-            {images.map((_, i) => (
-              <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === sliderIndex ? 'w-4 bg-neutral-800' : 'w-1.5 bg-neutral-300'}`} />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─── Before/After 비교 뷰어 (드래그 슬라이더) ─────────────────
-function BeforeAfterBlock({ block }) {
-  const [pos, setPos] = useState(50);
-  if (!block.before || !block.after) return null;
-
-  return (
-    <div className="relative w-full aspect-[4/5] overflow-hidden rounded-2xl shadow-sm select-none group touch-none bg-neutral-100">
-      <img src={block.after} className="absolute inset-0 w-full h-full object-cover pointer-events-none" alt="After" />
-      <img src={block.before} className="absolute inset-0 w-full h-full object-cover pointer-events-none" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }} alt="Before" />
-
-      {/* 슬라이더 라인 */}
-      <div className="absolute top-0 bottom-0 w-[3px] bg-white flex items-center justify-center pointer-events-none shadow-[0_0_10px_rgba(0,0,0,0.5)] z-10" style={{ left: `calc(${pos}% - 1.5px)` }}>
-        <div className="w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center border border-neutral-200 text-neutral-500">
-          <ChevronLeft className="w-4 h-4 -mr-0.5" /><ChevronRight className="w-4 h-4" />
-        </div>
-      </div>
-
-      {/* 투명 Range Input */}
-      <input
-        type="range" min="0" max="100" value={pos}
-        onChange={e => setPos(Number(e.target.value))}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize m-0 p-0 z-20 touch-pan-x"
-      />
-
-      <div className="absolute top-3 left-3 bg-black/50 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm pointer-events-none z-10">Before</div>
-      <div className="absolute top-3 right-3 bg-blue-600/80 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md backdrop-blur-sm pointer-events-none z-10">After</div>
     </div>
   );
 }
@@ -157,99 +36,6 @@ function BeforeAfterBlock({ block }) {
 // ─── 블로그 상세 뷰어 (미리보기 내부) ──────────────────────────
 function BlogDetailView({ post, onBack }) {
   if (!post) return null;
-
-  const renderBlock = (block, idx) => {
-    switch (block.type) {
-      case 'h1':
-        return <h1 key={idx} className={`text-xl font-bold text-black mt-4 text-${block.align || 'left'}`}>{block.content}</h1>;
-      case 'h2':
-        return <h2 key={idx} className={`text-lg font-bold text-black mt-3 text-${block.align || 'left'}`}>{block.content}</h2>;
-      case 'text':
-        return <p key={idx} className={`text-[14px] text-neutral-700 leading-relaxed whitespace-pre-line text-${block.align || 'left'}`}>{block.content}</p>;
-      case 'image':
-        return block.url ? (
-          <div key={idx} className="rounded-xl overflow-hidden">
-            <img src={block.url} alt={block.caption || ''} className="w-full h-auto" />
-            {block.caption && <p className="text-center text-[12px] text-neutral-400 mt-1.5">{block.caption}</p>}
-          </div>
-        ) : null;
-      case 'quote':
-        return (
-          <div key={idx} className="border-l-4 border-black pl-4 py-2">
-            <p className="text-[14px] font-bold text-neutral-800 italic">{block.content}</p>
-            {block.author && <p className="text-[12px] text-neutral-400 mt-1">{block.author}</p>}
-          </div>
-        );
-      case 'callout':
-        return (
-          <div key={idx} className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex gap-3">
-            <span className="text-xl">💡</span>
-            <p className="text-[14px] text-neutral-700 leading-relaxed">{block.content}</p>
-          </div>
-        );
-      case 'ul':
-        return (
-          <ul key={idx} className="space-y-1.5 ml-1">
-            {(block.content || '').split('\n').filter(Boolean).map((item, i) => (
-              <li key={i} className="text-[14px] text-neutral-700 flex items-start gap-2">
-                <span className="text-neutral-400 mt-1.5 text-[8px]">●</span>{item}
-              </li>
-            ))}
-          </ul>
-        );
-      case 'ol':
-        return (
-          <ol key={idx} className="space-y-1.5 ml-1">
-            {(block.content || '').split('\n').filter(Boolean).map((item, i) => (
-              <li key={i} className="text-[14px] text-neutral-700 flex items-start gap-2">
-                <span className="text-neutral-400 font-bold text-[13px] w-5 shrink-0">{i + 1}.</span>{item}
-              </li>
-            ))}
-          </ol>
-        );
-      case 'slider':
-        return <SliderBlock key={idx} block={block} />;
-      case 'beforeAfter':
-        return <BeforeAfterBlock key={idx} block={block} />;
-      case 'link':
-        return (
-          <div key={idx} className={`text-${block.align || 'left'}`}>
-            <a href={block.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 w-full p-3 bg-white border border-neutral-200 hover:border-blue-400 hover:shadow-md hover:bg-blue-50/50 rounded-2xl transition-all group text-left">
-              {block.image && (
-                <div className="w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden bg-neutral-100 shadow-sm border border-neutral-100">
-                  <img src={block.image} className="w-full h-full object-cover" alt="" />
-                </div>
-              )}
-              <div className="flex-1 flex flex-col justify-center min-w-0">
-                <span className="font-bold text-[14px] text-neutral-800 group-hover:text-blue-700 line-clamp-1">{block.title || block.url}</span>
-                {block.desc && <span className="text-[11px] text-neutral-400 line-clamp-1 mt-0.5">{block.desc}</span>}
-                <span className="text-[10px] text-neutral-300 line-clamp-1 mt-0.5">{block.url}</span>
-              </div>
-              <ExternalLink className="w-4 h-4 text-neutral-300 group-hover:text-blue-500 flex-shrink-0 mr-1" />
-            </a>
-          </div>
-        );
-      case 'video':
-        if (block.url) {
-          const embedUrl = getYouTubeEmbedUrl(block.url);
-          if (embedUrl) {
-            return (
-              <div key={idx} className="aspect-video rounded-xl overflow-hidden">
-                <iframe src={embedUrl} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Video" />
-              </div>
-            );
-          }
-          return (
-            <div key={idx} className="aspect-video bg-neutral-100 rounded-xl flex items-center justify-center text-neutral-400 border border-neutral-200">
-              <span className="text-sm">영상: {block.url}</span>
-            </div>
-          );
-        }
-        return null;
-      default:
-        return null;
-    }
-  };
 
   return (
     <motion.div
@@ -272,10 +58,10 @@ function BlogDetailView({ post, onBack }) {
 
       {/* 콘텐츠 */}
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        {/* 썸네일 */}
-        {post.thumbnail && (
-          <div className="w-full aspect-video overflow-hidden">
-            <img src={post.thumbnail} alt={post.title} className="w-full h-full object-cover" />
+        {/* 헤더 이미지 (원본 비율) */}
+        {(post.headerImage || post.thumbnail) && (
+          <div className="w-full overflow-hidden">
+            <img src={post.headerImage || post.thumbnail} alt={post.title} className="w-full h-auto" />
           </div>
         )}
 
@@ -311,8 +97,58 @@ function BlogDetailView({ post, onBack }) {
 }
 
 // ─── 간단한 미리보기 컴포넌트 (video, gallery, review, faq, priceTable) ──
+function UploadedVideoPlayer({ url }) {
+  const videoRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const togglePlay = (e) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) { v.play(); setIsPlaying(true); }
+    else { v.pause(); setIsPlaying(false); }
+  };
+
+  const toggleMute = (e) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setIsMuted(v.muted);
+  };
+
+  return (
+    <div className="relative rounded-xl overflow-hidden group">
+      <video
+        ref={videoRef}
+        src={url}
+        className="w-full"
+        autoPlay
+        muted
+        loop
+        playsInline
+      />
+      {/* 컨트롤 오버레이 */}
+      <div className="absolute bottom-0 left-0 right-0 p-2.5 flex justify-between items-center">
+        <button onClick={togglePlay} className="p-1.5 rounded-full bg-black/40 text-white active:bg-black/70 transition-colors">
+          {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+        </button>
+        <button onClick={toggleMute} className="p-1.5 rounded-full bg-black/40 text-white active:bg-black/70 transition-colors">
+          {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function VideoPreviewItem({ item }) {
   if (item.url) {
+    // 업로드된 영상 (R2)
+    if (item.type === 'upload') {
+      return <UploadedVideoPlayer url={item.url} />;
+    }
+    // YouTube
     const embedUrl = getYouTubeEmbedUrl(item.url);
     if (embedUrl) {
       return (
@@ -382,26 +218,29 @@ function SlideReviewPreview({ config }) {
   const goPrev = () => setCurrentIndex(prev => (prev > 0 ? prev - 1 : slides.length - 1));
   const goNext = () => setCurrentIndex(prev => (prev < slides.length - 1 ? prev + 1 : 0));
 
-  // 자동 슬라이드 (3.5초)
+  const autoPlayEnabled = data.autoPlay !== false;
+  const autoPlayMs = ((data.autoPlayInterval ?? 3.5) * 1000);
+
+  // 자동 슬라이드
   useEffect(() => {
-    if (slides.length <= 1) return;
+    if (slides.length <= 1 || !autoPlayEnabled) return;
     autoRef.current = setInterval(() => {
       setCurrentIndex(prev => (prev < slides.length - 1 ? prev + 1 : 0));
-    }, 3500);
+    }, autoPlayMs);
     return () => clearInterval(autoRef.current);
-  }, [slides.length]);
+  }, [slides.length, autoPlayEnabled, autoPlayMs]);
 
   const resetAuto = () => {
     if (autoRef.current) clearInterval(autoRef.current);
-    if (slides.length > 1) {
+    if (slides.length > 1 && autoPlayEnabled) {
       autoRef.current = setInterval(() => {
         setCurrentIndex(prev => (prev < slides.length - 1 ? prev + 1 : 0));
-      }, 3500);
+      }, autoPlayMs);
     }
   };
 
   // 양옆 슬라이드 보이게: 좌우 패딩 + 슬라이드 폭
-  const slideWidthPercent = 72;
+  const slideWidthPercent = 75;
   const gapPx = 10;
   const paddingPx = 20; // 좌우 패딩으로 양옆 슬라이드 노출
 
@@ -450,7 +289,7 @@ function SlideReviewPreview({ config }) {
       {/* 캐러셀 — 양옆 슬라이드 노출 */}
       <div
         className="overflow-hidden"
-        style={{ padding: `0 ${paddingPx}px` }}
+        style={{ padding: `0 ${paddingPx}px`, touchAction: data.lockScroll ? 'none' : 'pan-y' }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
@@ -461,7 +300,7 @@ function SlideReviewPreview({ config }) {
         <motion.div
           className="flex cursor-grab active:cursor-grabbing select-none"
           style={{ gap: `${gapPx}px` }}
-          animate={{ x: `calc(-${currentIndex} * (${slideWidthPercent}% + ${gapPx}px))` }}
+          animate={{ x: `calc(${(100 - slideWidthPercent) / 2}% - ${currentIndex} * (${slideWidthPercent}% + ${gapPx}px))` }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
           {slides.map((slide, i) => (
@@ -472,11 +311,11 @@ function SlideReviewPreview({ config }) {
               onClick={() => handleSlideClick(slide)}
             >
               {/* 이미지 */}
-              <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-neutral-800 mb-3">
+              <div className="rounded-2xl overflow-hidden bg-neutral-800 mb-3">
                 {slide.image ? (
-                  <img src={slide.image} className="w-full h-full object-cover select-none pointer-events-none" draggable={false} alt="" />
+                  <img src={slide.image} className="w-full h-auto select-none pointer-events-none" draggable={false} alt="" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-neutral-600">
+                  <div className="w-full aspect-[3/4] flex items-center justify-center text-neutral-600">
                     <span className="text-2xl">📷</span>
                   </div>
                 )}
@@ -522,6 +361,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
   const [activeNav, setActiveNav] = useState('home');
   const [bottomSheet, setBottomSheet] = useState(null); // 'product' | 'blog' | 'chat' | 'phone' | null
   const scrollRef = useRef(null);
+  const segmentRef = useRef(null);
 
   // pageConfigs에서 탭 정보 동적 파생
   const productTabs = Object.entries(pageConfigs || {})
@@ -546,6 +386,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
 
   // 하단 네비게이션 핸들러
   const handleNavChange = (navId) => {
+    setDetailPost(null); // 블로그 상세 뷰 닫기
     if (navId === 'home') {
       onTabChange('home');
       setActiveNav('home');
@@ -572,10 +413,11 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
       setActiveNav('blog');
       setBottomSheet(null);
       setTimeout(() => {
-        if (scrollRef.current) scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+        if (segmentRef.current) segmentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
     } else if (bottomSheet === 'chat') {
-      const kakaoUrl = settings.kakaoUrls?.[tabId] || settings.kakaoUrl || '';
+      const channel = (settings.chatChannels || []).find(ch => ch.id === tabId);
+      const kakaoUrl = channel?.kakaoUrl || settings.kakaoUrl || '';
       if (kakaoUrl) {
         window.open(kakaoUrl, '_blank');
       }
@@ -614,7 +456,12 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
   };
 
   // ─── 그룹 순서 기반 섹션 렌더링 ──────────────────────────
-  const groupOrder = config.sectionGroupOrder || SECTION_GROUPS.map(g => g.id);
+  const groupOrder = useMemo(() => {
+    const order = config.sectionGroupOrder || SECTION_GROUPS.map(g => g.id);
+    // 누락된 신규 그룹 자동 추가
+    const missing = SECTION_GROUPS.filter(g => !order.includes(g.id)).map(g => g.id);
+    return missing.length > 0 ? [...order, ...missing] : order;
+  }, [config.sectionGroupOrder]);
 
   // 그룹별 활성 섹션 (sections 배열 순서 유지)
   const groupedEnabled = useMemo(() => {
@@ -637,7 +484,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
       case 'splash':
         return <ServiceHeader key={section.id} tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />;
       case 'hero':
-        return <HeroSlider key={section.id} images={config.heroImages || []} />;
+        return <HeroSlider key={section.id} images={config.heroImages || []} lockScroll={config.heroScrollLock ?? false} />;
       case 'video':
         return <VideoPreview key={section.id} config={config} />;
       case 'gallery':
@@ -650,6 +497,8 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
         return <QuoteCalculator key={section.id} config={config} />;
       case 'blog':
         return <BlogList key={section.id} posts={currentBlogs} onPostClick={handleBlogClick} />;
+      case 'richText':
+        return <RichTextPreview key={section.id} config={config} sectionId={section.id} />;
       default:
         return null;
     }
@@ -674,7 +523,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
         if (!isFirst) return null;
 
         return (
-          <div key="segment-combined">
+          <div key="segment-combined" ref={segmentRef}>
             <SegmentedControl activeSegment={activeSegment} onSegmentChange={setActiveSegment} />
             {activeSegment === 'quote' && quoteGroupSections.map(s => renderSection(s))}
             {activeSegment === 'blog' && blogGroupSections.map(s => renderSection(s))}
@@ -695,7 +544,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
     return (
       <div className="w-full h-full bg-white flex flex-col relative font-sans text-neutral-900">
         {/* LIVE CONTENT */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-white scrollbar-hide [&>*+*]:mt-2 pb-[72px]">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-white relative z-10 scrollbar-hide [&>*+*]:mt-2 pb-[72px]">
           {groupOrder.map(groupId => {
             const content = renderGroup(groupId);
             if (!content) return null;
@@ -753,25 +602,38 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                   </p>
                 </div>
                 <div className="px-5 pb-8 space-y-1 pb-[max(2rem,env(safe-area-inset-bottom,2rem))]">
-                  {productTabs.map((tab) => {
-                    const isSelected = effectiveTab === tab.id;
-                    return (
+                  {bottomSheet === 'chat' ? (
+                    (settings.chatChannels || []).length > 0 ? (settings.chatChannels || []).map((ch) => (
                       <button
-                        key={tab.id}
-                        onClick={() => handleSheetProductSelect(tab.id)}
+                        key={ch.id}
+                        onClick={() => handleSheetProductSelect(ch.id)}
                         className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-colors hover:bg-neutral-50 active:bg-neutral-100"
                       >
-                        <p className="font-bold text-[14px] text-neutral-900 text-left">{tab.label}</p>
-                        {bottomSheet === 'chat' ? (
-                          <ChevronRight size={18} className="text-neutral-400" />
-                        ) : isSelected ? (
-                          <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
-                            <Check size={14} strokeWidth={3} className="text-white" />
-                          </div>
-                        ) : null}
+                        <p className="font-bold text-[14px] text-neutral-900 text-left">{ch.label}</p>
+                        <ChevronRight size={18} className="text-neutral-400" />
                       </button>
-                    );
-                  })}
+                    )) : (
+                      <div className="py-6 text-center text-sm text-neutral-400">등록된 채널이 없습니다.</div>
+                    )
+                  ) : (
+                    productTabs.map((tab) => {
+                      const isSelected = effectiveTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => handleSheetProductSelect(tab.id)}
+                          className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-colors hover:bg-neutral-50 active:bg-neutral-100"
+                        >
+                          <p className="font-bold text-[14px] text-neutral-900 text-left">{tab.label}</p>
+                          {isSelected ? (
+                            <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                              <Check size={14} strokeWidth={3} className="text-white" />
+                            </div>
+                          ) : null}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </motion.div>
             </>
@@ -965,31 +827,44 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                   <p className="text-[12px] text-neutral-400 mt-0.5">
                     {bottomSheet === 'product' && '상품별 페이지로 이동'}
                     {bottomSheet === 'blog' && '상품별 블로그로 이동'}
-                    {bottomSheet === 'chat' && '상품별 카카오톡 채널로 이동'}
+                    {bottomSheet === 'chat' && (settings.chatGreeting || '상품별 카카오톡 채널로 이동')}
                   </p>
                 </div>
 
                 {/* 상품 목록 */}
                 <div className="px-5 pb-8 space-y-1">
-                  {productTabs.map((tab) => {
-                    const isSelected = effectiveTab === tab.id;
-                    return (
+                  {bottomSheet === 'chat' ? (
+                    (settings.chatChannels || []).length > 0 ? (settings.chatChannels || []).map((ch) => (
                       <button
-                        key={tab.id}
-                        onClick={() => handleSheetProductSelect(tab.id)}
+                        key={ch.id}
+                        onClick={() => handleSheetProductSelect(ch.id)}
                         className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-colors hover:bg-neutral-50 active:bg-neutral-100"
                       >
-                        <p className="font-bold text-[14px] text-neutral-900 text-left">{tab.label}</p>
-                        {bottomSheet === 'chat' ? (
-                          <ChevronRight size={18} className="text-neutral-400" />
-                        ) : isSelected ? (
-                          <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
-                            <Check size={14} strokeWidth={3} className="text-white" />
-                          </div>
-                        ) : null}
+                        <p className="font-bold text-[14px] text-neutral-900 text-left">{ch.label}</p>
+                        <ChevronRight size={18} className="text-neutral-400" />
                       </button>
-                    );
-                  })}
+                    )) : (
+                      <div className="py-6 text-center text-sm text-neutral-400">등록된 채널이 없습니다.</div>
+                    )
+                  ) : (
+                    productTabs.map((tab) => {
+                      const isSelected = effectiveTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => handleSheetProductSelect(tab.id)}
+                          className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl transition-colors hover:bg-neutral-50 active:bg-neutral-100"
+                        >
+                          <p className="font-bold text-[14px] text-neutral-900 text-left">{tab.label}</p>
+                          {isSelected ? (
+                            <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                              <Check size={14} strokeWidth={3} className="text-white" />
+                            </div>
+                          ) : null}
+                        </button>
+                      );
+                    })
+                  )}
                 </div>
               </motion.div>
             </>
