@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 
 export function getYouTubeEmbedUrl(url) {
   if (!url) return null;
@@ -236,11 +236,7 @@ export function renderBlock(block, idx) {
     case 'video':
       if (block.url) {
         if (block.videoType === 'upload') {
-          return (
-            <div key={idx} className="rounded-xl overflow-hidden">
-              <video src={block.url} className="w-full" autoPlay muted loop playsInline />
-            </div>
-          );
+          return <BlogUploadedVideoPlayer key={idx} url={block.url} />;
         }
         const embedUrl = getYouTubeEmbedUrl(block.url);
         if (embedUrl) {
@@ -260,4 +256,40 @@ export function renderBlock(block, idx) {
     default:
       return null;
   }
+}
+
+function BlogUploadedVideoPlayer({ url }) {
+  const videoRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const togglePlay = (e) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) { v.play(); setIsPlaying(true); }
+    else { v.pause(); setIsPlaying(false); }
+  };
+
+  const toggleMute = (e) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setIsMuted(v.muted);
+  };
+
+  return (
+    <div className="relative rounded-xl overflow-hidden group">
+      <video ref={videoRef} src={url} className="w-full" autoPlay muted loop playsInline />
+      <div className="absolute bottom-0 left-0 right-0 p-2.5 flex justify-between items-center">
+        <button onClick={togglePlay} className="p-1.5 rounded-full bg-black/40 text-white active:bg-black/70 transition-colors">
+          {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+        </button>
+        <button onClick={toggleMute} className="p-1.5 rounded-full bg-black/40 text-white active:bg-black/70 transition-colors">
+          {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+        </button>
+      </div>
+    </div>
+  );
 }
