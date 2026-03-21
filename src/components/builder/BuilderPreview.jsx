@@ -119,11 +119,11 @@ function UploadedVideoPlayer({ url }) {
   };
 
   return (
-    <div className="relative rounded-xl overflow-hidden group aspect-video bg-neutral-100">
+    <div className="relative rounded-xl overflow-hidden group">
       <video
         ref={videoRef}
         src={url}
-        className="w-full h-full object-cover"
+        className="w-full"
         autoPlay
         muted
         loop
@@ -415,9 +415,13 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
       setActiveNav('blog');
       setBottomSheet(null);
       if (scrollRef.current) scrollRef.current.scrollTo({ top: 0 });
-      setTimeout(() => {
+      // 세그먼트로 스크롤 + 영상 로딩 후 재스크롤
+      const scrollToSegment = () => {
         if (segmentRef.current) segmentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+      };
+      setTimeout(scrollToSegment, 100);
+      setTimeout(scrollToSegment, 800);
+      setTimeout(scrollToSegment, 1500);
     } else if (bottomSheet === 'chat') {
       const channel = (settings.chatChannels || []).find(ch => ch.id === tabId);
       const kakaoUrl = channel?.kakaoUrl || settings.kakaoUrl || '';
