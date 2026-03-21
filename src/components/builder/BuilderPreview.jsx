@@ -414,6 +414,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
       setActiveSegment('blog');
       setActiveNav('blog');
       setBottomSheet(null);
+      if (scrollRef.current) scrollRef.current.scrollTo({ top: 0 });
       setTimeout(() => {
         if (segmentRef.current) segmentRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);

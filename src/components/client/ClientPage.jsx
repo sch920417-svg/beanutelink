@@ -118,8 +118,8 @@ export default function ClientPage() {
   const splashLogoText = pageConfigs['home']?.splash?.logoText || config?.splash?.logoText || settings?.brandName || 'BEANUTE';
 
   return (
-    <div className="min-h-screen bg-neutral-100 flex justify-center">
-      <div className="w-full max-w-[430px] bg-white min-h-screen relative overflow-hidden">
+    <div className="h-screen bg-neutral-100 flex justify-center">
+      <div className="w-full max-w-[430px] bg-white h-full relative overflow-hidden">
         {/* 스플래시 */}
         <AnimatePresence>
           {showSplash && (
@@ -146,16 +146,18 @@ export default function ClientPage() {
           />
         )}
 
-        {/* BuilderPreview를 client 모드로 렌더링 — 실시간 미리보기와 동일 */}
-        <BuilderPreview
-          mode="client"
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          config={config}
-          pageConfigs={pageConfigs}
-          blogs={blogs}
-          settings={settings}
-        />
+        {/* BuilderPreview를 client 모드로 렌더링 — 스플래시/모달 중에는 숨김 */}
+        <div className={`h-full ${showSplash || showPurposeModal ? 'opacity-0' : 'opacity-100'}`}>
+          <BuilderPreview
+            mode="client"
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            config={config}
+            pageConfigs={pageConfigs}
+            blogs={blogs}
+            settings={settings}
+          />
+        </div>
       </div>
     </div>
   );
