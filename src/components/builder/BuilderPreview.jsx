@@ -119,11 +119,11 @@ function UploadedVideoPlayer({ url }) {
   };
 
   return (
-    <div className="relative rounded-xl overflow-hidden group">
+    <div className="relative rounded-xl overflow-hidden group aspect-video bg-neutral-100">
       <video
         ref={videoRef}
         src={url}
-        className="w-full"
+        className="w-full h-full object-cover"
         autoPlay
         muted
         loop
