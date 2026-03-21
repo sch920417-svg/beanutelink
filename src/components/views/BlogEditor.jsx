@@ -572,8 +572,8 @@ const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, u
                             <BlogVideoPlayer url={block.url} />
                         )}
 
-                        {/* YouTube URL 입력 (업로드 타입이 아닌 경우) */}
-                        {block.videoType !== 'upload' && (
+                        {/* YouTube URL 입력 (youtube 타입 선택 후) */}
+                        {block.videoType === 'youtube' && (
                             <>
                                 <div className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 focus-within:border-lime-500/50 transition-all">
                                     <Icon name="MonitorPlay" size={16} className="text-neutral-500" />
@@ -599,11 +599,11 @@ const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, u
                             </>
                         )}
 
-                        {/* YouTube URL / 영상 업로드 버튼 */}
-                        {!block.url && uploadingBlockId !== block.id && (
+                        {/* YouTube URL / 영상 업로드 선택 버튼 (타입 미선택 + URL 없을 때) */}
+                        {!block.videoType && !block.url && uploadingBlockId !== block.id && (
                             <div className="grid grid-cols-2 gap-3">
                                 <button
-                                    onClick={() => updateBlock(block.id, { videoType: undefined })}
+                                    onClick={() => updateBlock(block.id, { videoType: 'youtube' })}
                                     className="py-3 border-2 border-dashed border-neutral-700 rounded-xl text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors text-sm font-bold flex items-center justify-center gap-2"
                                 >
                                     <Icon name="Link" size={16} /> YouTube URL
