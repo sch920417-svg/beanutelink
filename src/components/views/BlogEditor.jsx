@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Icons, BLOCK_TYPES } from '../../data/links';
 import { uploadCompressed } from '../../services/storage';
+import { uploadVideo } from '../../services/videoUpload';
+import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { BlogPreviewPanel } from './BlogPreviewPanel';
 
 // Common Icon Renderer
 const Icon = ({ name, size = 24, className = "" }) => {
@@ -100,8 +103,15 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
         date: initialData?.date || new Date().toLocaleDateString('ko-KR').replace(/\. /g, '.').slice(0, -1),
         tags: initialData?.tags || [],
         thumbnail: initialData?.thumbnail || '',
+        headerImage: initialData?.headerImage || '',
         blocks: initialData?.blocks || []
     });
+
+    // Video upload state
+    const [uploadingBlockId, setUploadingBlockId] = useState(null);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const videoFileInputRef = useRef(null);
+    const videoTargetBlockRef = useRef(null);
 
     // Dnd-kit sensors
     const sensors = useSensors(
@@ -123,11 +133,11 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
     };
 
     const handleSave = () => {
-        if (!post.title.trim()) {
-            showToast('블로그 제목을 입력해주세요.');
-            return;
+        const saveData = { ...post };
+        if (!saveData.title.trim()) {
+            saveData.title = '제목 없음';
         }
-        onSave(post);
+        onSave(saveData);
     };
 
     // --- Block Manipulation Functions ---
@@ -155,6 +165,31 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
             blocks: prev.blocks.filter(b => b.id !== id)
         }));
     }, []);
+
+    const handleBlogVideoUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        e.target.value = '';
+
+        const blockId = videoTargetBlockRef.current;
+        if (!blockId) return;
+
+        setUploadingBlockId(blockId);
+        setUploadProgress(0);
+        showToast('영상 업로드 중...');
+
+        try {
+            const result = await uploadVideo(file, (p) => setUploadProgress(p));
+            updateBlock(blockId, { url: result.url, videoType: 'upload' });
+            showToast('영상 업로드 완료!');
+        } catch (err) {
+            showToast(`업로드 실패: ${err.message}`);
+        } finally {
+            setUploadingBlockId(null);
+            setUploadProgress(0);
+            videoTargetBlockRef.current = null;
+        }
+    };
 
     const handleDragEnd = (event) => {
         const { active, over } = event;
@@ -192,9 +227,10 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
     };
 
     return (
-        <div className="w-full flex flex-col h-full bg-neutral-900 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden">
+        <div className="w-full flex flex-col flex-1 min-h-0 h-full bg-neutral-950 overflow-hidden">
+            <input ref={videoFileInputRef} type="file" accept="video/mp4,video/quicktime,video/webm" className="hidden" onChange={handleBlogVideoUpload} />
             {/* Header */}
-            <div className="flex-shrink-0 h-[70px] border-b border-neutral-800 flex items-center justify-between px-6 sm:px-8 bg-neutral-900/95 backdrop-blur z-20">
+            <div className="flex-shrink-0 h-[70px] border-b border-neutral-800 flex items-center justify-between px-6 sm:px-8 bg-neutral-900 z-20">
                 <div className="flex items-center gap-3">
                     <Icon name="FileText" size={20} className="text-lime-400" />
                     <span className="font-extrabold text-white text-[16px] sm:text-xl truncate max-w-[200px] sm:max-w-md">{post.title || "새로운 블로그 글"}</span>
@@ -209,32 +245,61 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
                 </div>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-10 py-8 custom-scrollbar relative">
+            {/* Two-column layout: Editor + Preview */}
+            <div className="flex flex-1 overflow-hidden">
+            {/* Left: Editor */}
+            <div className="flex-1 overflow-y-auto px-4 sm:px-10 py-8 custom-scrollbar relative bg-neutral-900">
                 <div className="max-w-4xl mx-auto space-y-8">
                     
-                    {/* Meta Data Section (Existing Code) */}
+                    {/* Meta Data Section */}
                     <div className="flex flex-col sm:flex-row gap-6 bg-neutral-950/40 p-6 rounded-3xl border border-neutral-800/60 shadow-inner">
-                        <div className="w-full sm:w-40 h-40 bg-neutral-950 rounded-2xl flex-shrink-0 relative overflow-hidden border border-neutral-800 group shadow-md">
-                            {post.thumbnail ? (
-                                <>
-                                    <img src={post.thumbnail} className="w-full h-full object-cover" alt="thumbnail" />
-                                    <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white">
-                                        <Icon name="Camera" size={24} className="mb-2" />
-                                        <span className="text-xs font-bold">변경하기</span>
+                        <div className="flex flex-col gap-3 shrink-0">
+                            {/* 목록 썸네일 (1:1) */}
+                            <div className="w-full sm:w-40 h-32 bg-neutral-950 rounded-2xl relative overflow-hidden border border-neutral-800 group shadow-md">
+                                {post.thumbnail ? (
+                                    <>
+                                        <img src={post.thumbnail} className="w-full h-full object-cover" alt="list-thumbnail" />
+                                        <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white">
+                                            <Icon name="Camera" size={20} className="mb-1" />
+                                            <span className="text-[10px] font-bold">변경</span>
+                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'thumbnail')} />
+                                        </label>
+                                        <button onClick={(e) => { e.preventDefault(); updatePost({ thumbnail: '' }); }} className="absolute top-1.5 right-1.5 p-1 bg-black/50 text-white rounded-lg hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                            <Icon name="Trash2" size={12} />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-neutral-500 hover:text-lime-400 hover:bg-lime-400/5 transition-colors">
+                                        <Icon name="ImagePlus" size={24} className="mb-2 opacity-60" />
+                                        <span className="text-[10px] font-bold tracking-wider">목록 썸네일</span>
+                                        <span className="text-[9px] text-neutral-600 mt-0.5">1:1 비율</span>
                                         <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'thumbnail')} />
                                     </label>
-                                    <button onClick={(e) => { e.preventDefault(); updatePost({ thumbnail: '' }); }} className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-lg hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100">
-                                        <Icon name="Trash2" size={14} />
-                                    </button>
-                                </>
-                            ) : (
-                                <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-neutral-500 hover:text-lime-400 hover:bg-lime-400/5 transition-colors">
-                                    <Icon name="ImagePlus" size={32} className="mb-3 opacity-60 ml-2" />
-                                    <span className="text-xs font-bold tracking-wider">썸네일 등록</span>
-                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'thumbnail')} />
-                                </label>
-                            )}
+                                )}
+                            </div>
+                            {/* 블로그 내부 헤더 이미지 (원본 비율) */}
+                            <div className="w-full sm:w-40 h-32 bg-neutral-950 rounded-2xl relative overflow-hidden border border-neutral-800 group shadow-md">
+                                {post.headerImage ? (
+                                    <>
+                                        <img src={post.headerImage} className="w-full h-full object-cover" alt="header-image" />
+                                        <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-white">
+                                            <Icon name="Camera" size={20} className="mb-1" />
+                                            <span className="text-[10px] font-bold">변경</span>
+                                            <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'headerImage')} />
+                                        </label>
+                                        <button onClick={(e) => { e.preventDefault(); updatePost({ headerImage: '' }); }} className="absolute top-1.5 right-1.5 p-1 bg-black/50 text-white rounded-lg hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                                            <Icon name="Trash2" size={12} />
+                                        </button>
+                                    </>
+                                ) : (
+                                    <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-neutral-500 hover:text-lime-400 hover:bg-lime-400/5 transition-colors">
+                                        <Icon name="ImagePlus" size={24} className="mb-2 opacity-60" />
+                                        <span className="text-[10px] font-bold tracking-wider">블로그 헤더</span>
+                                        <span className="text-[9px] text-neutral-600 mt-0.5">원본 비율</span>
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'headerImage')} />
+                                    </label>
+                                )}
+                            </div>
                         </div>
                         
                         <div className="flex-1 flex flex-col gap-4">
@@ -287,8 +352,12 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
                                            removeBlock={removeBlock}
                                            moveBlock={moveBlock}
                                            handleBlockImageUpload={handleBlockImageUpload}
-                                                                                      appendFormat={appendFormat}
+                                           appendFormat={appendFormat}
                                            showToast={showToast}
+                                           uploadingBlockId={uploadingBlockId}
+                                           uploadProgress={uploadProgress}
+                                           videoFileInputRef={videoFileInputRef}
+                                           videoTargetBlockRef={videoTargetBlockRef}
                                         />
                                     ))}
                                 </SortableContext>
@@ -356,12 +425,18 @@ export function BlogEditor({ initialData, onSave, onClose, showToast }) {
                     </div>
                 </div>
             </div>
+
+            {/* Right: Preview Panel - always visible on lg+ */}
+            <div className="hidden lg:flex w-[480px] shrink-0 h-full">
+                <BlogPreviewPanel post={post} />
+            </div>
+            </div>
         </div>
     );
 }
 
 // --- List Sorting Item Component ---
-const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, updateBlock, removeBlock, moveBlock, handleBlockImageUpload, appendFormat, showToast }) {
+const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, updateBlock, removeBlock, moveBlock, handleBlockImageUpload, appendFormat, showToast, uploadingBlockId, uploadProgress, videoFileInputRef, videoTargetBlockRef }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
     const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : 'auto', opacity: isDragging ? 0.8 : 1 };
 
@@ -440,16 +515,27 @@ const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, u
                             {(block.images || []).map((imgUrl, idx) => (
                                 <div key={idx} className="relative w-32 h-32 flex-shrink-0 rounded-xl overflow-hidden border border-neutral-700 group">
                                     <img src={imgUrl} className="w-full h-full object-cover" alt={`slide-${idx}`} />
-                                    <button 
-                                        onClick={() => {
-                                            const newImages = [...block.images];
-                                            newImages.splice(idx, 1);
-                                            updateBlock(block.id, { images: newImages });
-                                        }} 
-                                        className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded hover:bg-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                                    >
-                                        <Icon name="Trash2" size={14} />
-                                    </button>
+                                    <span className="absolute top-1 left-1 text-[10px] font-bold bg-black/50 text-white px-1.5 py-0.5 rounded">{idx + 1}</span>
+                                    <div className="absolute bottom-1 left-1 right-1 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex gap-0.5">
+                                            {idx > 0 && (
+                                                <button onClick={() => { const ni = [...block.images]; [ni[idx], ni[idx-1]] = [ni[idx-1], ni[idx]]; updateBlock(block.id, { images: ni }); }} className="p-1 bg-black/60 rounded text-white hover:bg-lime-500 transition-colors"><Icon name="ChevronLeft" size={12} /></button>
+                                            )}
+                                            {idx < (block.images || []).length - 1 && (
+                                                <button onClick={() => { const ni = [...block.images]; [ni[idx], ni[idx+1]] = [ni[idx+1], ni[idx]]; updateBlock(block.id, { images: ni }); }} className="p-1 bg-black/60 rounded text-white hover:bg-lime-500 transition-colors"><Icon name="ChevronRight" size={12} /></button>
+                                            )}
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                const newImages = [...block.images];
+                                                newImages.splice(idx, 1);
+                                                updateBlock(block.id, { images: newImages });
+                                            }}
+                                            className="p-1 bg-black/60 rounded text-white hover:bg-red-500 transition-colors"
+                                        >
+                                            <Icon name="Trash2" size={12} />
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                             <label className="w-32 h-32 flex-shrink-0 border-2 border-dashed border-neutral-700 flex flex-col items-center justify-center rounded-xl cursor-pointer hover:bg-neutral-800 text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors">
@@ -468,27 +554,72 @@ const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, u
                 )}
                 {block.type === 'video' && (
                     <div className="mt-6 flex flex-col gap-3">
-                        <div className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 focus-within:border-lime-500/50 transition-all">
-                            <Icon name="MonitorPlay" size={16} className="text-neutral-500" />
-                            <input
-                                value={block.url || ''}
-                                onChange={e => updateBlock(block.id, { url: e.target.value })}
-                                className="w-full text-sm bg-transparent outline-none text-neutral-200 placeholder-neutral-600 font-medium"
-                                placeholder="유튜브 URL 입력 (예: https://youtu.be/xxx)"
-                            />
-                        </div>
-                        {block.url && (() => {
-                            const embedUrl = getYouTubeEmbedUrl(block.url);
-                            return embedUrl ? (
-                                <div className="w-full aspect-video rounded-xl overflow-hidden">
-                                    <iframe src={embedUrl} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Video preview" />
+                        {/* 업로드 중 프로그레스 */}
+                        {uploadingBlockId === block.id && !block.url && (
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-sm text-neutral-400">
+                                    <Icon name="Upload" size={14} className="animate-pulse text-lime-400" />
+                                    <span>업로드 중... {uploadProgress}%</span>
                                 </div>
-                            ) : (
-                                <div className="w-full aspect-video rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center text-neutral-500">
-                                    <span className="text-sm">유효한 유튜브 URL을 입력하세요</span>
+                                <div className="w-full h-2 bg-neutral-800 rounded-full overflow-hidden">
+                                    <div className="h-full bg-lime-500 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                                 </div>
-                            );
-                        })()}
+                            </div>
+                        )}
+
+                        {/* 업로드된 영상 미리보기 */}
+                        {block.videoType === 'upload' && block.url && (
+                            <BlogVideoPlayer url={block.url} />
+                        )}
+
+                        {/* YouTube URL 입력 (업로드 타입이 아닌 경우) */}
+                        {block.videoType !== 'upload' && (
+                            <>
+                                <div className="flex items-center gap-3 bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 focus-within:border-lime-500/50 transition-all">
+                                    <Icon name="MonitorPlay" size={16} className="text-neutral-500" />
+                                    <input
+                                        value={block.url || ''}
+                                        onChange={e => updateBlock(block.id, { url: e.target.value })}
+                                        className="w-full text-sm bg-transparent outline-none text-neutral-200 placeholder-neutral-600 font-medium"
+                                        placeholder="유튜브 URL 입력 (예: https://youtu.be/xxx)"
+                                    />
+                                </div>
+                                {block.url && (() => {
+                                    const embedUrl = getYouTubeEmbedUrl(block.url);
+                                    return embedUrl ? (
+                                        <div className="w-full aspect-video rounded-xl overflow-hidden">
+                                            <iframe src={embedUrl} className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="Video preview" />
+                                        </div>
+                                    ) : (
+                                        <div className="w-full aspect-video rounded-xl bg-neutral-950 border border-neutral-800 flex items-center justify-center text-neutral-500">
+                                            <span className="text-sm">유효한 유튜브 URL을 입력하세요</span>
+                                        </div>
+                                    );
+                                })()}
+                            </>
+                        )}
+
+                        {/* YouTube URL / 영상 업로드 버튼 */}
+                        {!block.url && uploadingBlockId !== block.id && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => updateBlock(block.id, { videoType: undefined })}
+                                    className="py-3 border-2 border-dashed border-neutral-700 rounded-xl text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors text-sm font-bold flex items-center justify-center gap-2"
+                                >
+                                    <Icon name="Link" size={16} /> YouTube URL
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        videoTargetBlockRef.current = block.id;
+                                        videoFileInputRef.current?.click();
+                                    }}
+                                    disabled={!!uploadingBlockId}
+                                    className="py-3 border-2 border-dashed border-neutral-700 rounded-xl text-neutral-500 hover:text-lime-400 hover:border-lime-500/50 transition-colors text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    <Icon name="Upload" size={16} /> 영상 업로드
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
                 {block.type === 'quote' && (
@@ -605,4 +736,38 @@ const SortableEditorBlock = memo(function SortableEditorBlock({ block, bIndex, u
         </div>
     );
 });
+
+function BlogVideoPlayer({ url }) {
+    const videoRef = useRef(null);
+    const [isPlaying, setIsPlaying] = useState(true);
+    const [isMuted, setIsMuted] = useState(true);
+
+    const togglePlay = () => {
+        const v = videoRef.current;
+        if (!v) return;
+        if (v.paused) { v.play(); setIsPlaying(true); }
+        else { v.pause(); setIsPlaying(false); }
+    };
+
+    const toggleMute = () => {
+        const v = videoRef.current;
+        if (!v) return;
+        v.muted = !v.muted;
+        setIsMuted(v.muted);
+    };
+
+    return (
+        <div className="relative rounded-xl overflow-hidden group">
+            <video ref={videoRef} src={url} className="w-full" autoPlay muted loop playsInline />
+            <div className="absolute bottom-0 left-0 right-0 p-2 flex justify-between items-center">
+                <button onClick={togglePlay} className="p-1.5 rounded-full bg-black/40 text-white active:bg-black/70 transition-colors">
+                    {isPlaying ? <Pause size={14} /> : <Play size={14} />}
+                </button>
+                <button onClick={toggleMute} className="p-1.5 rounded-full bg-black/40 text-white active:bg-black/70 transition-colors">
+                    {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                </button>
+            </div>
+        </div>
+    );
+}
 
