@@ -678,7 +678,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
                   <h3 className="font-bold text-[16px] text-neutral-900">전화 문의</h3>
                   <p className="text-[12px] text-neutral-500 mt-0.5">{settings.brandName || '스튜디오'} 대표번호</p>
                 </div>
-                <div className="px-5 pb-5 space-y-3 pb-[env(safe-area-inset-bottom,16px)]">
+                <div className="px-5 space-y-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 24px)' }}>
                   {settings.phoneGuideMessage && (
                     <div className="bg-neutral-50 rounded-xl p-3 text-center">
                       <p className="text-[12px] text-neutral-600 leading-relaxed">{settings.phoneGuideMessage}</p>
