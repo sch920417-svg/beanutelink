@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Icons } from '../../data/links';
 import { getStats, clearEvents, getDateRange } from '../../utils/analytics';
-import { loadAnalyticsEvents } from '../../services/firestore';
+import { loadAnalyticsEvents, deleteAllAnalyticsEvents } from '../../services/firestore';
 
 const Icon = ({ name, size = 24, className = "" }) => {
     const Comp = Icons[name] || Icons.HelpCircle;
@@ -56,9 +56,15 @@ export function AnalyticsView() {
         [period, refreshKey, customFrom, customTo, firestoreEvents]
     );
 
-    const handleClear = () => {
+    const handleClear = async () => {
         if (window.confirm('모든 분석 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
             clearEvents();
+            try {
+                const count = await deleteAllAnalyticsEvents();
+                alert(`Firestore 통계 ${count}건 삭제 완료`);
+            } catch {
+                alert('Firestore 삭제 중 오류가 발생했습니다.');
+            }
             setRefreshKey(k => k + 1);
         }
     };
@@ -289,30 +295,49 @@ export function AnalyticsView() {
                     )}
                 </div>
 
-                {/* 일별 방문 추이 (CSS 바 차트) */}
+                {/* 일별 방문 추이 (꺾은선 그래프) */}
                 <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 md:p-8">
                     <h4 className="text-sm font-bold text-neutral-400 mb-6 uppercase tracking-wider">일별 방문 추이</h4>
-                    {dailyCounts.length > 0 ? (
-                        <div className="flex items-end gap-1 h-[180px]">
-                            {dailyCounts.slice(-14).map((day) => {
-                                const height = Math.max((day.pageViews / maxDaily) * 100, 4);
-                                const dateLabel = day.date.slice(5); // MM-DD
-                                return (
-                                    <div key={day.date} className="flex-1 flex flex-col items-center gap-1 group">
-                                        <div className="text-[10px] text-neutral-500 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {day.pageViews}
-                                        </div>
-                                        <div
-                                            className="w-full bg-lime-400/80 rounded-t-md hover:bg-lime-400 transition-colors min-h-[4px]"
-                                            style={{ height: `${height}%` }}
-                                            title={`${day.date}: ${day.pageViews}회 방문`}
-                                        />
-                                        <div className="text-[9px] text-neutral-600 font-medium mt-1">{dateLabel}</div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
+                    {dailyCounts.length > 0 ? (() => {
+                        const data = dailyCounts.slice(-14);
+                        const max = Math.max(...data.map(d => d.pageViews), 1);
+                        const W = 100;
+                        const H = 50;
+                        const padX = 0.5;
+                        const padY = 5;
+                        const stepX = data.length > 1 ? (W - padX * 2) / (data.length - 1) : 0;
+                        const points = data.map((d, i) => ({
+                            x: padX + i * stepX,
+                            y: H - padY - ((d.pageViews / max) * (H - padY * 2)),
+                            ...d,
+                        }));
+                        const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ');
+                        const area = `${line} L${points[points.length - 1].x},${H} L${points[0].x},${H} Z`;
+                        return (
+                            <div>
+                                <svg viewBox={`0 0 ${W} ${H + 12}`} className="w-full h-[200px]" preserveAspectRatio="none">
+                                    {/* 그라데이션 영역 */}
+                                    <defs>
+                                        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#a3e635" stopOpacity="0.3" />
+                                            <stop offset="100%" stopColor="#a3e635" stopOpacity="0" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path d={area} fill="url(#lineGrad)" />
+                                    {/* 꺾은선 */}
+                                    <path d={line} fill="none" stroke="#a3e635" strokeWidth="0.6" strokeLinecap="round" strokeLinejoin="round" />
+                                    {/* 점 + 값 */}
+                                    {points.map((p, i) => (
+                                        <g key={p.date}>
+                                            <circle cx={p.x} cy={p.y} r="1" fill="#a3e635" />
+                                            <text x={p.x} y={p.y - 2} textAnchor="middle" fill="#a3e635" fontSize="2.8" fontWeight="bold">{p.pageViews}</text>
+                                            <text x={p.x} y={H + 8} textAnchor="middle" fill="#737373" fontSize="2.5">{p.date.slice(5)}</text>
+                                        </g>
+                                    ))}
+                                </svg>
+                            </div>
+                        );
+                    })() : (
                         <div className="text-center py-8">
                             <Icon name="TrendingUp" size={32} className="text-neutral-700 mx-auto mb-3" />
                             <p className="text-sm text-neutral-500">아직 방문 데이터가 없습니다.</p>
@@ -340,156 +365,33 @@ export function AnalyticsView() {
                             </div>
                         </div>
 
-                        {/* 상품별 견적계산기 조회/완료 테이블 */}
+                        {/* 상품별 견적완료 테이블 */}
                         <div>
-                            <h5 className="text-xs font-bold text-neutral-500 mb-3">상품별 견적계산기 조회 횟수</h5>
+                            <h5 className="text-xs font-bold text-neutral-500 mb-3">상품별 견적완료 횟수</h5>
                             <div className="bg-neutral-950 rounded-2xl border border-neutral-800 overflow-hidden">
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b border-neutral-800">
                                             <th className="text-left px-4 py-3 text-neutral-500 font-medium text-xs">상품</th>
-                                            <th className="text-right px-4 py-3 text-neutral-500 font-medium text-xs">조회</th>
                                             <th className="text-right px-4 py-3 text-neutral-500 font-medium text-xs">견적완료</th>
-                                            <th className="text-right px-4 py-3 text-neutral-500 font-medium text-xs">전환율</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {quoteProductStats.map((item) => (
                                             <tr key={item.title} className="border-b border-neutral-800/50 last:border-0">
                                                 <td className="px-4 py-3 text-white font-medium">{item.title}</td>
-                                                <td className="px-4 py-3 text-right text-neutral-300">{item.views}회</td>
                                                 <td className="px-4 py-3 text-right text-lime-400 font-bold">{item.completes}회</td>
-                                                <td className="px-4 py-3 text-right text-neutral-400">{item.conversionRate}%</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-
-                        {/* 일자별 견적 데이터 상세 */}
-                        <div>
-                            <div className="flex justify-between items-center mb-3">
-                                <h5 className="text-xs font-bold text-neutral-500">일자별 견적 데이터</h5>
-                                <select
-                                    value={quoteProductFilter}
-                                    onChange={e => setQuoteProductFilter(e.target.value)}
-                                    className="bg-neutral-950 border border-neutral-700 text-xs text-white px-3 py-1.5 rounded-lg outline-none"
-                                >
-                                    <option value="all">전체 상품</option>
-                                    {quoteProductNames.map(name => (
-                                        <option key={name} value={name}>{name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            {filteredQuoteDetails.length > 0 ? (
-                                <div className="bg-neutral-950 rounded-2xl border border-neutral-800 overflow-hidden max-h-[400px] overflow-y-auto">
-                                    <table className="w-full text-sm">
-                                        <thead className="sticky top-0 bg-neutral-950">
-                                            <tr className="border-b border-neutral-800">
-                                                <th className="text-left px-4 py-3 text-neutral-500 font-medium text-xs">날짜</th>
-                                                <th className="text-left px-4 py-3 text-neutral-500 font-medium text-xs">상품</th>
-                                                <th className="text-center px-4 py-3 text-neutral-500 font-medium text-xs">일정</th>
-                                                <th className="text-center px-4 py-3 text-neutral-500 font-medium text-xs">인원</th>
-                                                <th className="text-center px-4 py-3 text-neutral-500 font-medium text-xs">반려동물</th>
-                                                <th className="text-right px-4 py-3 text-neutral-500 font-medium text-xs">견적금액</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredQuoteDetails.map((item, idx) => (
-                                                <tr key={idx} className="border-b border-neutral-800/50 last:border-0">
-                                                    <td className="px-4 py-3 text-neutral-400 text-xs">{item.date}</td>
-                                                    <td className="px-4 py-3 text-white font-medium text-xs">{item.productTitle}</td>
-                                                    <td className="px-4 py-3 text-center text-neutral-300 text-xs">
-                                                        {item.dateType === 'weekday' ? '평일' : item.dateType === 'weekend' ? '주말' : item.dateType}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-neutral-300 text-xs">
-                                                        {item.people !== '-' ? `${item.people}명` : '-'}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-neutral-300 text-xs">
-                                                        {item.pets !== '-' && item.pets > 0 ? `${item.pets}마리` : item.pets === 0 ? '없음' : '-'}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-right text-lime-400 font-bold text-xs">
-                                                        {item.totalCost !== '-' ? `${Number(item.totalCost).toLocaleString()}원` : '-'}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <div className="bg-neutral-950 rounded-2xl border border-neutral-800 py-8 text-center">
-                                    <p className="text-sm text-neutral-500">아직 견적 데이터가 없습니다.</p>
-                                </div>
-                            )}
-                        </div>
                     </div>
                 ) : (
                     <div className="text-center py-8">
                         <Icon name="Calculator" size={32} className="text-neutral-700 mx-auto mb-3" />
                         <p className="text-sm text-neutral-500">아직 견적 데이터가 없습니다.</p>
-                    </div>
-                )}
-            </div>
-
-            {/* 지역별 방문자 분석 */}
-            <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 md:p-8">
-                <h4 className="text-sm font-bold text-neutral-400 mb-6 uppercase tracking-wider">지역별 방문자 분석</h4>
-                {regionStats && regionStats.length > 0 ? (() => {
-                    const maxVisits = Math.max(...regionStats.map(r => r.visits), 1);
-                    return (
-                        <div className="space-y-3">
-                            {regionStats.map((item, idx) => (
-                                <div key={item.region}>
-                                    <button
-                                        onClick={() => setExpandedRegion(expandedRegion === item.region ? null : item.region)}
-                                        className="w-full text-left"
-                                    >
-                                        <div className="flex justify-between text-sm mb-2">
-                                            <span className="text-white flex items-center gap-2">
-                                                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold ${
-                                                    idx === 0 ? 'bg-lime-400/20 text-lime-400' :
-                                                    idx === 1 ? 'bg-neutral-700 text-neutral-300' :
-                                                    'bg-neutral-800 text-neutral-400'
-                                                }`}>{idx + 1}</span>
-                                                {item.region}
-                                            </span>
-                                            <span className="text-neutral-400 text-xs flex items-center gap-3">
-                                                <span>방문 <b className="text-white">{item.visits}</b></span>
-                                                <span>견적 <b className="text-lime-400">{item.quoteCompletes}</b></span>
-                                                <span>상담 <b className="text-yellow-400">{item.ctaClicks}</b></span>
-                                            </span>
-                                        </div>
-                                        <div className="w-full h-2.5 bg-neutral-950 rounded-full overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full transition-all duration-500 ${
-                                                    idx === 0 ? 'bg-lime-400' : idx === 1 ? 'bg-lime-500/60' : 'bg-neutral-600'
-                                                }`}
-                                                style={{ width: `${(item.visits / maxVisits) * 100}%` }}
-                                            />
-                                        </div>
-                                    </button>
-
-                                    {/* 도시별 세부 목록 (확장) */}
-                                    {expandedRegion === item.region && item.cities.length > 0 && (
-                                        <div className="mt-2 ml-8 space-y-1.5 pb-2">
-                                            {item.cities.map(c => (
-                                                <div key={c.city} className="flex justify-between items-center text-xs bg-neutral-950 rounded-lg px-3 py-2 border border-neutral-800">
-                                                    <span className="text-neutral-300">{c.city}</span>
-                                                    <span className="text-neutral-500 font-bold">{c.visits}명</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    );
-                })() : (
-                    <div className="text-center py-8">
-                        <Icon name="PieChart" size={32} className="text-neutral-700 mx-auto mb-3" />
-                        <p className="text-sm text-neutral-500">아직 지역 데이터가 없습니다.</p>
-                        <p className="text-xs text-neutral-600 mt-1">방문자가 접속하면 IP 기반으로 지역이 자동 감지됩니다.</p>
                     </div>
                 )}
             </div>

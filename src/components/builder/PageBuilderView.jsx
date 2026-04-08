@@ -17,6 +17,7 @@ import { GallerySection } from './GallerySection';
 import { SlideReviewSection } from './SlideReviewSection';
 import { RichTextSection } from './RichTextSection';
 import { FramePriceSection } from './FramePriceSection';
+import { MarqueeSection } from './MarqueeSection';
 import { BuilderPreview } from './BuilderPreview';
 
 const Icon = ({ name, size = 24, className = "" }) => {
@@ -39,6 +40,7 @@ const SECTION_COMPONENT_MAP = {
   gallery: GallerySection,
   slideReview: SlideReviewSection,
   richText: RichTextSection,
+  marquee: MarqueeSection,
 };
 
 // 섹션 타입별 추가 props (guide, blog는 blogs/setBlogs/activeTab 필요)
@@ -301,6 +303,7 @@ function SortableTabButton({ id, tab, isActive, onClick, onEdit }) {
 export function PageBuilderView({ pageConfigs, setPageConfigs, blogs, setBlogs, showToast, settings = {} }) {
   const [activeTab, setActiveTab] = useState(() => {
     const tabs = Object.entries(pageConfigs)
+      .filter(([id]) => id !== 'home')
       .map(([id, cfg]) => ({ id, order: cfg.meta?.order ?? 0 }))
       .sort((a, b) => a.order - b.order);
     return tabs[0]?.id || 'family';
@@ -451,10 +454,14 @@ export function PageBuilderView({ pageConfigs, setPageConfigs, blogs, setBlogs, 
     const section = sections.find(s => s.id === sectionId);
     const label = section ? SECTION_REGISTRY[section.type]?.label : '';
     updateSections(sections.filter(s => s.id !== sectionId));
-    // richText 섹션 삭제 시 해당 데이터도 정리
+    // 멀티 인스턴스 섹션 삭제 시 해당 데이터도 정리
     if (section?.type === 'richText' && config?.richTextData?.[sectionId]) {
       const { [sectionId]: _, ...rest } = config.richTextData;
       updateConfig('richTextData', rest);
+    }
+    if (section?.type === 'marquee' && config?.marqueeData?.[sectionId]) {
+      const { [sectionId]: _, ...rest } = config.marqueeData;
+      updateConfig('marqueeData', rest);
     }
     showToast(`"${label}" 블록이 삭제되었습니다.`);
   }, [sections, updateSections, showToast, config, updateConfig]);
@@ -510,23 +517,12 @@ export function PageBuilderView({ pageConfigs, setPageConfigs, blogs, setBlogs, 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleTabDragEnd}>
           <SortableContext items={tabs.map(t => t.id)} strategy={verticalListSortingStrategy}>
             <div className="flex gap-1 mb-5 overflow-x-auto pb-1 custom-scrollbar shrink-0 items-center">
-              {/* 홈 탭 */}
-              <button
-                onClick={() => setActiveTab('home')}
-                className={`flex items-center gap-1.5 px-4 py-3 rounded-xl font-bold text-sm whitespace-nowrap transition-all border-2 flex-shrink-0 ${
-                  activeTab === 'home'
-                    ? 'bg-lime-400 text-black border-lime-400'
-                    : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:border-neutral-600'
-                }`}
-              >
-                🏠 홈
-              </button>
               {tabs.map(tab => (
                 <SortableTabButton
                   key={tab.id}
                   id={tab.id}
                   tab={tab}
-                  isActive={activeTab !== 'home' && effectiveTab === tab.id}
+                  isActive={effectiveTab === tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   onEdit={() => setEditingTab(tab)}
                 />
@@ -547,7 +543,7 @@ export function PageBuilderView({ pageConfigs, setPageConfigs, blogs, setBlogs, 
             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-5 pr-1">
               {orderedGroups.map((group, groupIdx) => {
                 const groupSections = groupedSections[group.id] || [];
-                if (groupSections.length === 0 && !Object.entries(SECTION_REGISTRY).some(([type, meta]) => meta.group === group.id && !existingTypes.includes(type))) {
+                if (groupSections.length === 0 && !Object.entries(SECTION_REGISTRY).some(([type, meta]) => meta.group === group.id && (MULTI_INSTANCE_TYPES.includes(type) || !existingTypes.includes(type)))) {
                   return null;
                 }
 
@@ -597,7 +593,7 @@ export function PageBuilderView({ pageConfigs, setPageConfigs, blogs, setBlogs, 
                                 icon={meta.icon}
                                 isOpen={!!openSections[section.id]}
                                 onToggle={() => toggleSection(section.id)}
-                                badge={getSectionBadge(section.type, config)}
+                                badge={getSectionBadge(section.type, config, section.id)}
                                 enabled={section.enabled}
                                 onToggleEnabled={() => toggleSectionEnabled(section.id)}
                                 onDelete={() => handleDeleteSection(section.id)}

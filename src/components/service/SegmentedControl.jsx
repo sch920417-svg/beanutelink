@@ -39,6 +39,14 @@ export default function SegmentedControl({ activeSegment, onSegmentChange }) {
               }}
             >
               {seg.label}
+              {seg.id === 'blog' && !isActive && (
+                <span
+                  className="absolute top-1 right-1.5 bg-red-500 text-white text-[8px] font-bold w-[14px] h-[14px] rounded-full animate-pulse flex items-center justify-center"
+                  style={{ transform: 'rotate(-12deg)' }}
+                >
+                  N
+                </span>
+              )}
             </button>
           );
         })}

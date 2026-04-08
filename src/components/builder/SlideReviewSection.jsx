@@ -120,6 +120,45 @@ export function SlideReviewSection({ config, updateConfig, showToast }) {
         </div>
       </div>
 
+      {/* 자동 슬라이드 + 간격 설정 */}
+      <div className="bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 space-y-3">
+        <label className="flex items-center gap-2.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={data.autoPlay !== false}
+            onChange={(e) => update({ autoPlay: e.target.checked })}
+            className="w-4 h-4 rounded border-neutral-600 bg-neutral-950 text-lime-500 focus:ring-lime-500 focus:ring-offset-0 cursor-pointer"
+          />
+          <span className="text-xs font-bold text-neutral-400">자동 슬라이드</span>
+        </label>
+        {data.autoPlay !== false && (
+          <div className="flex items-center gap-2 pl-6">
+            <span className="text-xs text-neutral-500">슬라이드 간격</span>
+            <input
+              type="number"
+              min={1}
+              max={30}
+              step={0.5}
+              value={data.autoPlayInterval ?? 3.5}
+              onChange={(e) => update({ autoPlayInterval: parseFloat(e.target.value) || 3.5 })}
+              className="w-20 bg-neutral-950 border border-neutral-700 rounded-lg px-2.5 py-1.5 text-white text-sm text-center outline-none focus:border-lime-500/50 transition-colors"
+            />
+            <span className="text-xs text-neutral-500">초</span>
+          </div>
+        )}
+      </div>
+
+      {/* 스크롤 고정 토글 */}
+      <label className="flex items-center gap-2.5 cursor-pointer bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3">
+        <input
+          type="checkbox"
+          checked={data.lockScroll ?? false}
+          onChange={(e) => update({ lockScroll: e.target.checked })}
+          className="w-4 h-4 rounded border-neutral-600 bg-neutral-950 text-lime-500 focus:ring-lime-500 focus:ring-offset-0 cursor-pointer"
+        />
+        <span className="text-xs font-bold text-neutral-400">스와이프 시 스크롤 고정</span>
+      </label>
+
       {/* 슬라이드 그리드 (2열, 히어로 슬라이더 스타일) */}
       <div className="grid grid-cols-2 gap-3">
         {slides.map((slide, idx) => (

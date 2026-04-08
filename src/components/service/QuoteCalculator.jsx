@@ -171,69 +171,90 @@ function ReviewLightbox({ images, currentIndex, onClose, onNavigate }) {
 // ─── 리뷰 슬라이더 (absolute 포지셔닝, 3:4 비율) ─────────────
 function ReviewSection({ images = [], lockScroll = false }) {
   const [activeSlide, setActiveSlide] = useState(0);
-  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const touchRef = useRef({ startX: 0, startY: 0, swiping: false });
 
   if (images.length === 0) return null;
 
-  return (
-    <>
-      <div className={`relative h-[460px] w-full flex items-center justify-center ${lockScroll ? 'touch-none' : ''}`}>
-        {images.map((img, i) => {
-          const offset = i - activeSlide;
-          if (Math.abs(offset) > 2) return null;
+  const slideWidthPercent = 75;
+  const gapPx = 10;
+  const paddingPx = 20;
 
-          return (
-            <motion.div
+  const goPrev = () => {
+    setActiveSlide(prev => (prev > 0 ? prev - 1 : images.length - 1));
+    trackEvent(EVENT_TYPES.REVIEW_INTERACT, { action: 'slide', slideIndex: activeSlide - 1 });
+  };
+  const goNext = () => {
+    setActiveSlide(prev => (prev < images.length - 1 ? prev + 1 : 0));
+    trackEvent(EVENT_TYPES.REVIEW_INTERACT, { action: 'slide', slideIndex: activeSlide + 1 });
+  };
+
+  const onTouchStart = (e) => {
+    touchRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, swiping: false };
+  };
+  const onTouchMove = (e) => {
+    const dx = e.touches[0].clientX - touchRef.current.startX;
+    const dy = e.touches[0].clientY - touchRef.current.startY;
+    if (!touchRef.current.swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+      touchRef.current.swiping = true;
+    }
+    if (touchRef.current.swiping) e.preventDefault();
+  };
+  const onTouchEnd = (e) => {
+    const dx = e.changedTouches[0].clientX - touchRef.current.startX;
+    if (Math.abs(dx) > 40) { dx < 0 ? goNext() : goPrev(); }
+  };
+  const onMouseDown = (e) => { touchRef.current = { startX: e.clientX, startY: e.clientY, swiping: true }; };
+  const onMouseUp = (e) => {
+    if (!touchRef.current.swiping) return;
+    const dx = e.clientX - touchRef.current.startX;
+    if (Math.abs(dx) > 40) { dx < 0 ? goNext() : goPrev(); }
+    touchRef.current.swiping = false;
+  };
+
+  return (
+    <div>
+      {/* 캐러셀 — flex 트랙 방식 */}
+      <div
+        style={{ touchAction: lockScroll ? 'none' : 'pan-y' }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onMouseDown={onMouseDown}
+        onMouseUp={onMouseUp}
+        onMouseLeave={() => { touchRef.current.swiping = false; }}
+      >
+        <motion.div
+          className="flex cursor-grab active:cursor-grabbing select-none"
+          style={{ gap: `${gapPx}px` }}
+          animate={{ x: `calc(${(100 - slideWidthPercent) / 2}% - ${activeSlide} * (${slideWidthPercent}% + ${gapPx}px))` }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        >
+          {images.map((img, i) => (
+            <div
               key={`review-slide-${img.id || i}`}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.2}
-              onDragEnd={(e, info) => {
-                if (info.offset.x < -50 && activeSlide < images.length - 1) {
-                  setActiveSlide(prev => prev + 1);
-                  trackEvent(EVENT_TYPES.REVIEW_INTERACT, { action: 'slide', slideIndex: activeSlide + 1 });
-                }
-                if (info.offset.x > 50 && activeSlide > 0) {
-                  setActiveSlide(prev => prev - 1);
-                  trackEvent(EVENT_TYPES.REVIEW_INTERACT, { action: 'slide', slideIndex: activeSlide - 1 });
-                }
-              }}
-              initial={false}
-              animate={{
-                x: `calc(${offset * 105}%)`,
-                scale: offset === 0 ? 1.1 : 0.9,
-                opacity: offset === 0 ? 1 : Math.abs(offset) === 1 ? 0.5 : 0,
-                filter: offset === 0 ? 'blur(0px)' : 'blur(2px)',
-                zIndex: offset === 0 ? 10 : 5,
-              }}
-              transition={{ duration: 0.35, ease: 'easeInOut' }}
-              onClick={() => {
-                if (offset === 0) {
-                  setLightboxIndex(i);
-                  trackEvent(EVENT_TYPES.REVIEW_INTERACT, { action: 'lightbox', slideIndex: i });
-                } else {
-                  setActiveSlide(i);
-                }
-              }}
-              className={`absolute w-[280px] aspect-[3/4] rounded-2xl overflow-hidden shadow-2xl cursor-pointer ${offset === 0 ? 'ring-2 ring-white/50' : ''}`}
+              style={{ width: `${slideWidthPercent}%`, flexShrink: 0 }}
+              className={`transition-all duration-300 ${i === activeSlide ? 'opacity-100' : 'opacity-30'}`}
+              onClick={() => { if (i !== activeSlide) setActiveSlide(i); }}
             >
-              {img.url ? (
-                <img src={img.url} alt={img.alt || '리뷰'} className="w-full h-full object-cover pointer-events-none bg-neutral-50" draggable={false} />
-              ) : (
-                <div className="w-full h-full bg-neutral-200 flex items-center justify-center">
-                  <div className="text-center space-y-2">
-                    <ImageIcon size={28} className="mx-auto text-neutral-300" />
-                    <p className="text-neutral-400 text-[11px] font-medium">{img.alt || '리뷰 이미지'}</p>
+              <div className={`rounded-2xl overflow-hidden bg-neutral-200 ${i === activeSlide ? 'shadow-lg' : ''}`}>
+                {img.url ? (
+                  <img src={img.url} alt={img.alt || '리뷰'} className="w-full h-auto select-none pointer-events-none" draggable={false} />
+                ) : (
+                  <div className="w-full aspect-[3/4] flex items-center justify-center">
+                    <div className="text-center space-y-2">
+                      <ImageIcon size={28} className="mx-auto text-neutral-300" />
+                      <p className="text-neutral-400 text-[11px] font-medium">{img.alt || '리뷰 이미지'}</p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
+                )}
+              </div>
+            </div>
+          ))}
+        </motion.div>
       </div>
 
       {/* 도트 인디케이터 */}
-      <div className="flex justify-center gap-2 mt-6">
+      <div className="flex justify-center gap-2 mt-4">
         {images.map((_, i) => (
           <div
             key={`dot-${i}`}
@@ -244,22 +265,10 @@ function ReviewSection({ images = [], lockScroll = false }) {
         ))}
       </div>
 
-      <p className="text-center text-[11px] text-neutral-400 mt-4 px-4 font-medium">
-        사진을 넘겨보거나 중앙 사진을 클릭하여 확대해보세요.
+      <p className="text-center text-[11px] text-neutral-400 mt-3 pb-1 px-4 font-medium">
+        사진을 넘겨 볼 수 있습니다.
       </p>
-
-      {/* 라이트박스 */}
-      <AnimatePresence>
-        {lightboxIndex !== null && images[lightboxIndex] && (
-          <ReviewLightbox
-            images={images}
-            currentIndex={lightboxIndex}
-            onClose={() => setLightboxIndex(null)}
-            onNavigate={(idx) => setLightboxIndex(idx)}
-          />
-        )}
-      </AnimatePresence>
-    </>
+    </div>
   );
 }
 
@@ -287,6 +296,12 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
   const ctaUrl = qb?.ctaUrl || defaultPriceConfig.consultationLink;
   const disclaimer = qb?.disclaimer || defaultPriceConfig.bottomNoticeText;
   const priceTableImage = config?.priceTable?.image || defaultPriceConfig.priceTableImage;
+
+  // sections 배열에서 개별 블록 활성화 상태 확인
+  const isSectionEnabled = (type) => {
+    const section = (config?.sections || []).find(s => s.type === type);
+    return section ? section.enabled !== false : true;
+  };
 
   // 상품 목록이 있으면 config 기반, 없으면 하드코딩 폴백
   const useConfigMode = configProducts.length > 0;
@@ -708,7 +723,7 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
       )}
 
       {/* ── 5. 촬영 상품 가격표 (이미지) ── */}
-      <section className="bg-neutral-50 rounded-3xl p-5 overflow-hidden">
+      {isSectionEnabled('priceTable') && <section className="bg-neutral-50 rounded-3xl p-5 overflow-hidden">
         <h3 className="text-[15px] font-bold text-black mb-4">촬영 상품 가격표</h3>
         {priceTableImage ? (
           <img
@@ -726,10 +741,10 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
             </div>
           </div>
         )}
-      </section>
+      </section>}
 
       {/* ── 6. 고객 리뷰 슬라이더 ── */}
-      <section className="bg-neutral-50 rounded-3xl py-5 overflow-hidden">
+      {isSectionEnabled('review') && <section className="bg-neutral-50 rounded-3xl py-5 overflow-hidden">
         <h3 className="text-[15px] font-bold text-black mb-4 px-5">고객 리뷰</h3>
         {reviewImages.length > 0 ? (
           <ReviewSection images={reviewImages} lockScroll={config?.reviews?.lockScroll ?? false} />
@@ -742,7 +757,7 @@ export default function QuoteCalculator({ products = [], config = null, activeTa
             ]}
           />
         )}
-      </section>
+      </section>}
 
       {/* ── 7. 자주 묻는 질문 (FAQ) ── */}
       {faqs && faqs.length > 0 && (

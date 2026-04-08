@@ -1,7 +1,7 @@
 import { db } from '../firebase';
 import {
   doc, getDoc, getDocs, addDoc,
-  collection, onSnapshot, deleteDoc,
+  collection, onSnapshot, deleteDoc, writeBatch,
   query, where, orderBy,
 } from 'firebase/firestore';
 import { restSetDoc, testConnection } from './firestoreRest';
@@ -136,4 +136,37 @@ export function subscribeAnalyticsEvents(dateFrom, dateTo, callback) {
     console.warn('분석 이벤트 구독 실패:', err.message);
     callback([]);
   });
+}
+
+/**
+ * Firestore 분석 이벤트 전체 삭제 (배치 500개 단위)
+ */
+export async function deleteAllAnalyticsEvents() {
+  try {
+    const snap = await getDocs(collection(db, ANALYTICS_COLLECTION));
+    if (snap.empty) return 0;
+
+    let count = 0;
+    let batch = writeBatch(db);
+    let batchCount = 0;
+
+    for (const docSnap of snap.docs) {
+      batch.delete(docSnap.ref);
+      batchCount++;
+      count++;
+      if (batchCount === 500) {
+        await batch.commit();
+        batch = writeBatch(db);
+        batchCount = 0;
+      }
+    }
+    if (batchCount > 0) {
+      await batch.commit();
+    }
+    console.log(`분석 이벤트 ${count}건 삭제 완료`);
+    return count;
+  } catch (err) {
+    console.error('분석 이벤트 Firestore 삭제 실패:', err.message);
+    throw err;
+  }
 }

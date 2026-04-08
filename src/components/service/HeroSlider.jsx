@@ -79,7 +79,7 @@ function SlideItem({ img, index, dragX }) {
 }
 
 // ─── 메인 슬라이더 ─────────────────────────────────────────────
-export default function HeroSlider({ images = [] }) {
+export default function HeroSlider({ images = [], lockScroll = false }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [containerWidth, setContainerWidth] = useState(430);
   const containerRef = useRef(null);
@@ -147,7 +147,7 @@ export default function HeroSlider({ images = [] }) {
 
   return (
     <div ref={containerRef} className="relative w-full select-none" style={{ marginTop: 20, marginBottom: 20 }}>
-      <div className="overflow-hidden" style={{ touchAction: 'pan-x' }}>
+      <div className="overflow-hidden" style={{ touchAction: lockScroll ? 'none' : 'pan-y' }}>
         <motion.div
           className="flex items-center"
           style={{

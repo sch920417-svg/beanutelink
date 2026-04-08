@@ -14,7 +14,7 @@ import { initialBlogs } from '../../data/data';
  */
 export default function ClientPage() {
   const [showSplash, setShowSplash] = useState(true);
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState('');
   const [showPurposeModal, setShowPurposeModal] = useState(() => !getVisitPurpose());
 
   // localStorage에서 초기값 읽기 (즉시 표시), 이후 Firestore 리스너가 덮어씀
@@ -84,7 +84,14 @@ export default function ClientPage() {
     [pageConfigs]
   );
 
-  const effectiveTab = activeTab;
+  // 첫 번째 상품 탭을 기본값으로 설정
+  useEffect(() => {
+    if (productTabs.length > 0 && !activeTab) {
+      setActiveTab(productTabs[0].id);
+    }
+  }, [productTabs, activeTab]);
+
+  const effectiveTab = activeTab || productTabs[0]?.id || 'family';
   const config = pageConfigs[effectiveTab] || initialPageConfigs[effectiveTab];
 
   // 스플래시 타이머

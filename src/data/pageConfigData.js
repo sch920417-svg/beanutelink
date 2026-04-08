@@ -18,10 +18,11 @@ export const SECTION_REGISTRY = {
   framePrice: { label: '액자 가격표',    icon: '🖼️', group: 'segment-quote' },
   blog:       { label: '블로그 콘텐츠 연결', icon: '📝', group: 'segment-blog' },
   richText:   { label: '블로그 에디터',     icon: '✏️', group: 'content' },
+  marquee:    { label: '로고 마퀴',        icon: '🏷️', group: 'media' },
 };
 
 // 한 페이지에 여러 개 추가 가능한 섹션 타입
-export const MULTI_INSTANCE_TYPES = ['richText'];
+export const MULTI_INSTANCE_TYPES = ['richText', 'marquee'];
 
 // 섹션 그룹 정의
 export const SECTION_GROUPS = [
@@ -48,10 +49,11 @@ export const SECTION_DATA_KEY = {
   blog: 'blogMapping',
   framePrice: 'framePrice',
   richText: 'richTextData',
+  marquee: 'marqueeData',
 };
 
 // 배지 생성 함수 (섹션 타입별)
-export const getSectionBadge = (type, config) => {
+export const getSectionBadge = (type, config, sectionId) => {
   switch (type) {
     case 'hero': return `${(config.heroImages || []).length}장`;
     case 'guide': return `${(config.guide?.cards || []).length}개`;
@@ -61,6 +63,10 @@ export const getSectionBadge = (type, config) => {
     case 'video': return `${(config.video?.items || []).length}개`;
     case 'gallery': return `${(config.gallery?.images || []).length}장`;
     case 'slideReview': return `${(config.slideReview?.slides || []).length}개`;
+    case 'marquee': {
+      const md = config.marqueeData?.[sectionId];
+      return md ? `${md.rows?.length || 0}줄` : null;
+    }
     case 'richText': return null;
     default: return null;
   }
@@ -155,6 +161,7 @@ export const createDefaultConfig = (tabLabel, tabId, order = 0, icon = '📦') =
   gallery: { title: '갤러리', images: [] },
   slideReview: { title: '내가 이 스튜디오를 예약한 이유', subtitle: '실제 고객님의 생생한 리뷰', bgColor: '#000000', textColor: '#ffffff', slides: [] },
   richTextData: {},
+  marqueeData: {},
 });
 
 export const initialPageConfigs = {

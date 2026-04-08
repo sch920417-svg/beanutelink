@@ -79,6 +79,7 @@ export default function App() {
     greeting: '당신만의 특별한 순간을 기록합니다.',
     kakaoUrl: '',
     kakaoUrls: {},
+    chatChannels: [],
     chatGreeting: '상품을 선택하면 카카오톡 채팅 상담으로 연결됩니다.',
     phone: '',
     businessHours: '평일 10:00 - 18:00\n주말/공휴일 휴무',
@@ -505,7 +506,7 @@ export default function App() {
                 <Route path="/admin/builder" element={<PageBuilderView pageConfigs={pageConfigs} setPageConfigs={setPageConfigs} blogs={blogs} setBlogs={setBlogs} showToast={showToast} settings={settings} />} />
                 <Route path="/admin/products" element={<ProductsView products={products} setProducts={setProducts} showToast={showToast} />} />
                 <Route path="/admin/editor/:productId" element={<EditorView blocks={blocks} setBlocks={setBlocks} showToast={showToast} />} />
-                <Route path="/admin/blog/:productId" element={<BlogView blogs={blogs} setBlogs={setBlogs} showToast={showToast} isPreviewOpen={isPreviewOpen} />} />
+                <Route path="/admin/blog/:productId" element={<BlogView blogs={blogs} setBlogs={setBlogs} showToast={showToast} />} />
                 <Route path="/admin/analytics" element={<AnalyticsView />} />
                 <Route path="/admin/preview" element={<MainPreview products={products} settings={settings} />} />
                 <Route path="/admin/settings" element={<SettingsView settings={settings} setSettings={setSettings} showToast={showToast} pageConfigs={pageConfigs} />} />
@@ -513,9 +514,6 @@ export default function App() {
             </Suspense>
           </div>
 
-          <div className="mt-12 pt-6 border-t border-neutral-800 text-center text-neutral-600 text-xs shrink-0">
-            © 2026 Beanute Studio Admin System. All rights reserved.
-          </div>
         </div>
       </main>
 

@@ -32,7 +32,7 @@ export default function ServicePage() {
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState('');
   const [activeSegment, setActiveSegment] = useState('quote');
-  const [activeNav, setActiveNav] = useState('home');
+  const [activeNav, setActiveNav] = useState('product');
   const [showChatModal, setShowChatModal] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPurposeModal, setShowPurposeModal] = useState(() => !getVisitPurpose());
@@ -54,16 +54,15 @@ export default function ServicePage() {
     }
   });
 
-  // "홈" 탭을 맨 앞에 추가한 탭 목록
   const allTabs = useMemo(() => {
     if (!config?.tabs) return [];
-    return [{ id: 'home', label: '홈' }, ...config.tabs];
+    return config.tabs;
   }, [config]);
 
-  // 설정 로드 후 홈 탭 활성화
+  // 설정 로드 후 첫 번째 탭 활성화
   useEffect(() => {
     if (allTabs.length > 0 && !activeTab) {
-      setActiveTab('home');
+      setActiveTab(allTabs[0].id);
     }
   }, [allTabs]);
 
@@ -118,15 +117,15 @@ export default function ServicePage() {
     return null;
   }, [effectiveTab]);
 
-  // 채팅 모달용 상품 목록 (탭별 kakaoUrl 매핑)
+  // 채팅 모달용 상품 목록 (settings.chatChannels 기반)
   const chatProducts = useMemo(() => {
-    if (!config?.tabs) return [];
-    return config.tabs.map((tab) => ({
-      id: tab.id,
-      title: tab.label,
-      kakaoUrl: settings.kakaoUrls?.[tab.id] || settings.kakaoUrl || '',
+    if (!settings.chatChannels?.length) return [];
+    return settings.chatChannels.map((ch) => ({
+      id: ch.id,
+      title: ch.label,
+      kakaoUrl: ch.kakaoUrl || '',
     }));
-  }, [config, settings]);
+  }, [settings.chatChannels]);
 
   const isLoading = configLoading || productsLoading || postsLoading;
 
@@ -159,13 +158,6 @@ export default function ServicePage() {
       }
       return;
     }
-    // home
-    setActiveTab('home');
-    setActiveNav('home');
-    setActiveSegment('quote');
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-    }
   };
 
   // 탭 변경 시 네비 상태 동기화
@@ -173,7 +165,7 @@ export default function ServicePage() {
     trackEvent(EVENT_TYPES.TAB_CHANGE, { fromTab: activeTab, toTab: tabId });
     setActiveTab(tabId);
     setActiveSegment('quote');
-    setActiveNav(tabId === 'home' ? 'home' : 'product');
+    setActiveNav('product');
   };
 
   return (

@@ -1,7 +1,8 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Icons } from '../../data/links';
-import { ArrowLeft, ChevronRight, Home, ShoppingBag, BookOpen, MessageCircle, Phone, Clock, Check, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ShoppingBag, BookOpen, MessageCircle, Phone, Clock, Check, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { trackEvent, EVENT_TYPES } from '../../utils/analytics';
 import ServiceHeader from '../service/ServiceHeader';
 import HeroSlider from '../service/HeroSlider';
 import ShootingGuide from '../service/ShootingGuide';
@@ -17,6 +18,67 @@ const Icon = ({ name, size = 24, className = "" }) => {
 };
 
 
+
+// ─── 마퀴 미리보기 ──────────────────────────────────────────
+function MarqueePreview({ config, sectionId }) {
+  const data = config.marqueeData?.[sectionId];
+  if (!data?.rows?.length) return null;
+  const hasLogos = data.rows.some(r => r.logos?.length > 0);
+  if (!hasLogos) return null;
+
+  return (
+    <div className="py-6 px-5 bg-white">
+      {data.title && (
+        <h3 className="text-[15px] font-bold text-neutral-900 mb-4">{data.title}</h3>
+      )}
+      <div className="space-y-3">
+        {data.rows.map(row => {
+          if (!row.logos?.length) return null;
+          return (
+            <div key={row.id} className="overflow-hidden">
+              <div
+                className="flex w-max"
+                style={{
+                  animation: `marquee-scroll ${row.speed}s linear infinite`,
+                  animationDirection: row.direction === 'right' ? 'reverse' : 'normal',
+                }}
+              >
+                <div className="flex items-center shrink-0">
+                  {row.logos.map(logo => (
+                    <img
+                      key={logo.id}
+                      src={logo.url}
+                      alt={logo.alt}
+                      className="object-contain shrink-0 grayscale opacity-70 px-4"
+                      style={{ height: `${row.height}px` }}
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center shrink-0">
+                  {row.logos.map(logo => (
+                    <img
+                      key={`${logo.id}-dup`}
+                      src={logo.url}
+                      alt={logo.alt}
+                      className="object-contain shrink-0 grayscale opacity-70 px-4"
+                      style={{ height: `${row.height}px` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <style>{`
+        @keyframes marquee-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 // ─── 리치텍스트 미리보기 ──────────────────────────────────────
 function RichTextPreview({ config, sectionId }) {
@@ -358,7 +420,7 @@ function SlideReviewPreview({ config }) {
 export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, blogs = {}, settings = {}, mode = 'preview' }) {
   const [activeSegment, setActiveSegment] = useState('quote');
   const [detailPost, setDetailPost] = useState(null);
-  const [activeNav, setActiveNav] = useState('home');
+  const [activeNav, setActiveNav] = useState('product');
   const [bottomSheet, setBottomSheet] = useState(null); // 'product' | 'blog' | 'chat' | 'phone' | null
   const scrollRef = useRef(null);
   const segmentRef = useRef(null);
@@ -373,7 +435,7 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
       order: cfg?.meta?.order ?? 0,
     }))
     .sort((a, b) => a.order - b.order);
-  const tabs = [{ id: 'home', label: '홈', order: -1 }, ...productTabs];
+  const tabs = productTabs;
 
   const effectiveTab = activeTab;
 
@@ -381,20 +443,11 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
   const handleTabChange = (tabId) => {
     onTabChange(tabId);
     setActiveSegment('quote');
-    setActiveNav(tabId === 'home' ? 'home' : 'product');
+    setActiveNav('product');
   };
 
   // 하단 네비게이션 핸들러
   const handleNavChange = (navId) => {
-    if (navId === 'home') {
-      setDetailPost(null); // 홈 이동 시에만 블로그 상세 닫기
-      onTabChange('home');
-      setActiveNav('home');
-      setActiveSegment('quote');
-      setBottomSheet(null);
-      if (scrollRef.current) scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
     // 상품, 블로그, 채팅, 전화 → 바텀시트 열기 (BlogDetailView 위에 표시됨)
     setBottomSheet(navId);
   };
@@ -459,6 +512,12 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
   const handleBlogClick = (post) => {
     if (post._raw) {
       setDetailPost(post._raw);
+      if (mode === 'client') {
+        trackEvent(EVENT_TYPES.BLOG_VIEW, {
+          blogTitle: post._raw.title || '(제목 없음)',
+          productTitle: config?.header?.tabLabel || activeTab,
+        });
+      }
     }
   };
 
@@ -506,6 +565,8 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
         return <BlogList key={section.id} posts={currentBlogs} onPostClick={handleBlogClick} />;
       case 'richText':
         return <RichTextPreview key={section.id} config={config} sectionId={section.id} />;
+      case 'marquee':
+        return <MarqueePreview key={section.id} config={config} sectionId={section.id} />;
       default:
         return null;
     }
@@ -718,7 +779,6 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
         <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t border-neutral-200 z-40">
           <div className="flex items-center justify-around py-2 pb-3">
             {[
-              { id: 'home', label: '홈', icon: Home },
               { id: 'product', label: '상품', icon: ShoppingBag },
               { id: 'blog', label: '블로그', icon: BookOpen },
               { id: 'chat', label: '채팅상담', icon: MessageCircle },
@@ -957,7 +1017,6 @@ export function BuilderPreview({ activeTab, onTabChange, config, pageConfigs, bl
         <div className="shrink-0 bg-white border-t border-neutral-200 z-40 relative">
           <div className="flex items-center justify-around py-2 pb-3">
             {[
-              { id: 'home', label: '홈', icon: Home },
               { id: 'product', label: '상품', icon: ShoppingBag },
               { id: 'blog', label: '블로그', icon: BookOpen },
               { id: 'chat', label: '채팅상담', icon: MessageCircle },

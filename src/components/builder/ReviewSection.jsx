@@ -46,6 +46,17 @@ export function ReviewSection({ config, updateConfig, showToast }) {
         />
       </div>
 
+      {/* 스크롤 고정 토글 */}
+      <label className="flex items-center gap-2.5 cursor-pointer bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3">
+        <input
+          type="checkbox"
+          checked={reviews.lockScroll ?? false}
+          onChange={(e) => update({ ...reviews, lockScroll: e.target.checked })}
+          className="w-4 h-4 rounded border-neutral-600 bg-neutral-950 text-lime-500 focus:ring-lime-500 focus:ring-offset-0 cursor-pointer"
+        />
+        <span className="text-xs font-bold text-neutral-400">스와이프 시 스크롤 고정</span>
+      </label>
+
       <div className="grid grid-cols-3 gap-2">
         {reviews.items.map((review) => (
           <div key={review.id} className="aspect-[3/4] bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden relative group">

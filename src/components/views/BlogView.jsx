@@ -22,7 +22,6 @@ const SortableBlogItem = ({ id, b, handleDeleteBlog }) => {
                 e.stopPropagation();
                 
                 document.dispatchEvent(new CustomEvent('openBlogEditor', { detail: b.id }));
-                document.dispatchEvent(new Event('openMobilePreview'));
             }} 
             className={`bg-neutral-900 border ${isDragging ? 'border-lime-500 shadow-2xl scale-105' : 'border-neutral-800'} rounded-2xl overflow-hidden hover:border-lime-500/50 transition-all cursor-pointer flex flex-col relative group`}
         >
@@ -56,7 +55,7 @@ const Icon = ({ name, size = 24, className = "" }) => {
     return Comp ? <Comp size={size} className={className} /> : null;
 };
 
-export function BlogView({ blogs, setBlogs, showToast, isPreviewOpen }) {
+export function BlogView({ blogs, setBlogs, showToast }) {
     const { productId } = useParams();
     const navigate = useNavigate();
     const currentProductId = productId || '1';
@@ -118,7 +117,6 @@ export function BlogView({ blogs, setBlogs, showToast, isPreviewOpen }) {
         setTimeout(() => {
             setEditingBlogId(newId);
             setIsModalOpen(true);
-            document.dispatchEvent(new Event('openMobilePreview'));
         }, 50);
     };
 
@@ -175,37 +173,25 @@ export function BlogView({ blogs, setBlogs, showToast, isPreviewOpen }) {
                 </div>
             </DndContext>
 
-            {/* Admin Blog Settings Modal (Expanded for Editor) */}
+            {/* Full-screen Blog Editor Overlay */}
             {isModalOpen && (
-                <div className={`fixed inset-0 flex items-end justify-center bg-black/70 backdrop-blur-sm animate-in fade-in-0 duration-200 z-50 ${isPreviewOpen ? 'md:pr-[400px]' : ''}`}>
-                    <div className="w-full max-w-5xl h-[92vh] bg-neutral-900 border-x border-t border-neutral-800/80 rounded-t-[2rem] sm:rounded-t-[2.5rem] shadow-2xl flex flex-col animate-in slide-in-from-bottom-full duration-400 pb-safe">
-                        {/* Drag Handle Area */}
-                        <div className="flex justify-center pt-5 pb-3 w-full cursor-pointer hover:bg-neutral-800/30 transition-colors rounded-t-[2rem] sm:rounded-t-[2.5rem]" onClick={() => setIsModalOpen(false)}>
-                            <div className="w-16 h-1.5 bg-neutral-700/80 rounded-full"></div>
+                <div className="fixed inset-0 z-[9999] bg-neutral-950 flex flex-col animate-in fade-in-0 duration-200">
+                    {editingBlogId ? (
+                        <BlogEditor
+                            initialData={currentBlogs.find(b => b.id === editingBlogId)}
+                            onSave={handleSaveBlog}
+                            onClose={() => {
+                                setIsModalOpen(false);
+                                setTimeout(() => setEditingBlogId(null), 300);
+                            }}
+                            showToast={showToast}
+                        />
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center">
+                            <Icon name="Loader2" size={48} className="text-lime-500 animate-spin mb-4" />
+                            <h4 className="text-lg font-bold text-neutral-300">에디터 로딩 중...</h4>
                         </div>
-                        
-                        {/* Modal Content - Blog Editor Mounting Point */}
-                        {editingBlogId ? (
-                            <div className="flex-1 h-full w-full">
-                                <BlogEditor 
-                                    initialData={currentBlogs.find(b => b.id === editingBlogId)} 
-                                    onSave={handleSaveBlog}
-                                    onClose={() => {
-                                        setIsModalOpen(false);
-                                        setTimeout(() => setEditingBlogId(null), 300);
-                                    }}
-                                    showToast={showToast}
-                                />
-                            </div>
-                        ) : (
-                            <div className="flex-1 overflow-y-auto px-6 sm:px-10 pb-12 pt-2 custom-scrollbar">
-                                <div className="flex flex-col items-center justify-center h-full text-center">
-                                    <Icon name="Loader2" size={48} className="text-lime-500 animate-spin mb-4" />
-                                    <h4 className="text-lg font-bold text-neutral-300">에디터 로딩 중...</h4>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    )}
                 </div>
             )}
         </div>

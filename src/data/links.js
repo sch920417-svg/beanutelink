@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
     Link2, LayoutGrid, Type, GalleryHorizontal, Video, Minus, Calendar, BookOpen, Image, HelpCircle,
-    LayoutDashboard, Package, PencilRuler, FileText, PieChart, Settings, MonitorPlay, ExternalLink, Rocket, Menu, Smartphone, X, Plus, GripVertical, Trash2, ArrowUpRight, Play, Eye, Inbox, Camera, ChevronRight,
+    LayoutDashboard, Package, PencilRuler, FileText, PieChart, Settings, MonitorPlay, ExternalLink, Rocket, Menu, Smartphone, X, Plus, GripVertical, Trash2, ArrowUpRight, Play, Eye, Inbox, Camera, ChevronLeft, ChevronRight,
     Save, ImagePlus, ChevronUp, ChevronDown, AlignLeft, AlignCenter, AlignRight, Bold, Underline,
     Home, MessageCircle, Phone
 } from "lucide-react";
@@ -37,6 +37,7 @@ export const Icons = {
     Eye,
     Inbox,
     Camera,
+    ChevronLeft,
     ChevronRight,
     Save,
     ImagePlus,

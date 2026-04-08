@@ -183,25 +183,18 @@ export function GuideCardSection({ config, updateConfig, blogs, setBlogs, showTo
         <Icon name="Plus" size={16} /> 가이드 카드 추가
       </button>
 
-      {/* Blog Editor Modal */}
+      {/* Blog Editor Full-screen Overlay */}
       {isEditorOpen && editingCardId && (
-        <div className="fixed inset-0 flex items-end justify-center bg-black/70 backdrop-blur-sm z-[200]">
-          <div className="w-full max-w-5xl h-[92vh] bg-neutral-900 border-x border-t border-neutral-800/80 rounded-t-[2rem] shadow-2xl flex flex-col pb-safe">
-            <div className="flex justify-center pt-5 pb-3 w-full cursor-pointer hover:bg-neutral-800/30 transition-colors rounded-t-[2rem]" onClick={() => setIsEditorOpen(false)}>
-              <div className="w-16 h-1.5 bg-neutral-700/80 rounded-full"></div>
-            </div>
-            <div className="flex-1 h-full w-full">
-              <BlogEditor
-                initialData={getEditingBlog()}
-                onSave={handleSaveBlog}
-                onClose={() => {
-                  setIsEditorOpen(false);
-                  setTimeout(() => setEditingCardId(null), 300);
-                }}
-                showToast={showToast}
-              />
-            </div>
-          </div>
+        <div className="fixed inset-0 z-[9999] bg-neutral-950 flex flex-col">
+          <BlogEditor
+            initialData={getEditingBlog()}
+            onSave={handleSaveBlog}
+            onClose={() => {
+              setIsEditorOpen(false);
+              setTimeout(() => setEditingCardId(null), 300);
+            }}
+            showToast={showToast}
+          />
         </div>
       )}
     </div>

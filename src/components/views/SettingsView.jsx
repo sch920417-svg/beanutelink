@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icons } from '../../data/links';
 import { uploadCompressed } from '../../services/storage';
 
@@ -25,6 +25,21 @@ export function SettingsView({ settings, setSettings, showToast, pageConfigs = {
             order: cfg?.meta?.order ?? 0,
         }))
         .sort((a, b) => a.order - b.order);
+
+    // 기존 kakaoUrls → chatChannels 마이그레이션
+    useEffect(() => {
+        if (!settings.chatChannels?.length && settings.kakaoUrls) {
+            const channels = Object.entries(settings.kakaoUrls)
+                .filter(([_, url]) => url)
+                .map(([id, url]) => {
+                    const tab = productTabs.find(t => t.id === id);
+                    return { id, label: tab?.label || id, kakaoUrl: url };
+                });
+            if (channels.length > 0) {
+                setSettings(prev => ({ ...prev, chatChannels: channels }));
+            }
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleSave = () => {
         showToast('환경 설정 내역이 안전하게 저장되었습니다.');
@@ -130,33 +145,58 @@ export function SettingsView({ settings, setSettings, showToast, pageConfigs = {
                             </div>
                         </div>
 
-                        {/* 상품별 카카오 URL */}
-                        {productTabs.length > 0 && (
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-neutral-400 uppercase">상품별 카카오톡 채널 URL</label>
-                                <p className="text-sm text-neutral-500 mb-2">각 상품마다 다른 카카오톡 채널로 연결하려면 개별 URL을 입력하세요.</p>
-                                <div className="space-y-3">
-                                    {productTabs.map((tab) => (
-                                        <div key={tab.id} className="flex gap-3 items-center">
-                                            <div className="flex items-center gap-2 w-28 shrink-0">
-                                                <span className="text-lg">{tab.icon}</span>
-                                                <span className="text-sm font-medium text-neutral-300 truncate">{tab.label}</span>
-                                            </div>
-                                            <input
-                                                type="text"
-                                                value={(settings.kakaoUrls || {})[tab.id] || ''}
-                                                onChange={(e) => setSettings({
-                                                    ...settings,
-                                                    kakaoUrls: { ...(settings.kakaoUrls || {}), [tab.id]: e.target.value }
-                                                })}
-                                                placeholder={settings.kakaoUrl || 'https://pf.kakao.com/...'}
-                                                className="flex-1 bg-neutral-950 border border-neutral-700 rounded-xl p-3 text-white text-sm focus:border-lime-400 outline-none transition-colors"
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
+                        {/* 채팅 채널 목록 (동적 추가/삭제) */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-neutral-400 uppercase">채팅 상담 채널 목록</label>
+                            <p className="text-sm text-neutral-500 mb-2">채팅 상담 모달에 표시할 채널을 추가하거나 삭제할 수 있습니다.</p>
+                            <div className="space-y-3">
+                                {(settings.chatChannels || []).map((ch, idx) => (
+                                    <div key={ch.id} className="flex gap-2 items-center">
+                                        <input
+                                            type="text"
+                                            value={ch.label}
+                                            onChange={(e) => {
+                                                const updated = [...(settings.chatChannels || [])];
+                                                updated[idx] = { ...updated[idx], label: e.target.value };
+                                                setSettings({ ...settings, chatChannels: updated });
+                                            }}
+                                            placeholder="채널 이름"
+                                            className="w-28 shrink-0 bg-neutral-950 border border-neutral-700 rounded-xl p-3 text-white text-sm focus:border-lime-400 outline-none transition-colors"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={ch.kakaoUrl}
+                                            onChange={(e) => {
+                                                const updated = [...(settings.chatChannels || [])];
+                                                updated[idx] = { ...updated[idx], kakaoUrl: e.target.value };
+                                                setSettings({ ...settings, chatChannels: updated });
+                                            }}
+                                            placeholder={settings.kakaoUrl || 'https://pf.kakao.com/...'}
+                                            className="flex-1 bg-neutral-950 border border-neutral-700 rounded-xl p-3 text-white text-sm focus:border-lime-400 outline-none transition-colors"
+                                        />
+                                        <button
+                                            onClick={() => {
+                                                const updated = (settings.chatChannels || []).filter((_, i) => i !== idx);
+                                                setSettings({ ...settings, chatChannels: updated });
+                                            }}
+                                            className="w-10 h-10 shrink-0 rounded-xl bg-neutral-800 hover:bg-red-900/50 border border-neutral-700 flex items-center justify-center transition-colors"
+                                        >
+                                            <Icon name="Trash2" size={14} className="text-neutral-400" />
+                                        </button>
+                                    </div>
+                                ))}
+                                <button
+                                    onClick={() => {
+                                        const channels = settings.chatChannels || [];
+                                        const newId = `chat-${Date.now()}`;
+                                        setSettings({ ...settings, chatChannels: [...channels, { id: newId, label: '', kakaoUrl: '' }] });
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-neutral-700 text-neutral-400 hover:text-lime-400 hover:border-lime-400/50 transition-colors text-sm"
+                                >
+                                    <Icon name="Plus" size={16} /> 채널 추가
+                                </button>
                             </div>
-                        )}
+                        </div>
 
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-neutral-400 uppercase">채팅 상담 안내 문구</label>
@@ -184,25 +224,15 @@ export function SettingsView({ settings, setSettings, showToast, pageConfigs = {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    {productTabs.length > 0 ? productTabs.map((tab) => (
-                                        <div key={tab.id} className="bg-neutral-50 rounded-xl p-3 flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm">{tab.icon}</span>
-                                                <span className="text-[12px] font-medium text-neutral-600">{tab.label}</span>
-                                            </div>
+                                    {(settings.chatChannels || []).length > 0 ? (settings.chatChannels || []).map((ch) => (
+                                        <div key={ch.id} className="bg-neutral-50 rounded-xl p-3 flex items-center justify-between">
+                                            <span className="text-[12px] font-medium text-neutral-600">{ch.label || '(이름 없음)'}</span>
                                             <Icon name="ExternalLink" size={12} className="text-neutral-400" />
                                         </div>
                                     )) : (
-                                        <>
-                                            <div className="bg-neutral-50 rounded-xl p-3 flex items-center justify-between">
-                                                <span className="text-[12px] font-medium text-neutral-600">가족사진</span>
-                                                <Icon name="ExternalLink" size={12} className="text-neutral-400" />
-                                            </div>
-                                            <div className="bg-neutral-50 rounded-xl p-3 flex items-center justify-between">
-                                                <span className="text-[12px] font-medium text-neutral-600">프로필</span>
-                                                <Icon name="ExternalLink" size={12} className="text-neutral-400" />
-                                            </div>
-                                        </>
+                                        <div className="py-4 text-center text-[11px] text-neutral-400">
+                                            채널을 추가해주세요
+                                        </div>
                                     )}
                                 </div>
                             </div>

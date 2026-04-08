@@ -46,6 +46,17 @@ export function HeroSliderSection({ config, updateConfig, showToast }) {
 
   return (
     <div className="space-y-4">
+      {/* 스크롤 고정 토글 */}
+      <label className="flex items-center gap-2.5 cursor-pointer bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3">
+        <input
+          type="checkbox"
+          checked={config.heroScrollLock ?? false}
+          onChange={(e) => updateConfig('heroScrollLock', e.target.checked)}
+          className="w-4 h-4 rounded border-neutral-600 bg-neutral-950 text-lime-500 focus:ring-lime-500 focus:ring-offset-0 cursor-pointer"
+        />
+        <span className="text-xs font-bold text-neutral-400">스와이프 시 스크롤 고정</span>
+      </label>
+
       <div className="grid grid-cols-2 gap-3">
         {images.map((img, idx) => (
           <div key={img.id} className="relative group bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
